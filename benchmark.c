@@ -22,12 +22,21 @@ uint64_t xoro_s1 = 0xABCDEF0123456789ULL;
 // For wyrand
 uint64_t wyrand_seed = 0xDEADBEEF12345678ULL;
 
+// For PCG64
+uint64_t pcg_state = 0x853c49e6748fea9bULL; // Standard PCG initial state
+uint64_t pcg_inc = 0xda3e39cb94b95bdbULL;   // Standard PCG increment (must be odd)
+
 
 // --- Helper Functions ---
 
 // Rotate left function (used by LoopMix and xoroshiro)
 inline uint64_t rotateLeft(const uint64_t x, int k) {
     return (x << k) | (x >> (64 - k));
+}
+
+// Rotate right function (used by PCG64)
+inline uint64_t rotateRight(const uint64_t x, int k) {
+    return (x >> k) | (x << (64 - k));
 }
 
 
@@ -47,21 +56,18 @@ double get_time_sec() {
 
 // LoopMix128 generator function
 inline uint64_t loopMix128() {
+    uint64_t output = GR * (mix + fast_loop);
 
+    if ( fast_loop == 0 )
+      {
+      slow_loop += GR;
+      mix ^= slow_loop;
+      }
 
-uint64_t output = GR * (mix + fast_loop);
+    mix = rotateLeft(mix, 59) + fast_loop;
+    fast_loop = rotateLeft(fast_loop, 47) + GR;
 
-if ( fast_loop == 0 )
-  {
-  slow_loop += GR;
-
-  mix ^= slow_loop;
-  }
-
-mix = rotateLeft(mix, 59) + fast_loop;
-fast_loop = rotateLeft(fast_loop, 47) + GR;
-
-return output;
+    return output;
 }
 
 
@@ -85,6 +91,14 @@ inline uint64_t wyrand(void) {
     return (uint64_t)(t >> 64) ^ (uint64_t)t;
 }
 
+// PCG64 (PCG XSL RR 64/64) generator function
+inline uint64_t pcg64_random(void) {
+    uint64_t oldstate = pcg_state;
+    pcg_state = oldstate * 6364136223846793005ULL + (pcg_inc | 1); // LCG step
+    // Output function (PCG XSL RR):
+    uint64_t xsh = ((oldstate >> 22u) ^ oldstate);
+    return rotateRight(xsh, (oldstate >> 61u) + 22u);
+}
 
 
 // --- Main Benchmark Routine ---
@@ -119,7 +133,7 @@ int main(int argc, char **argv) {
         dummyVar = loopMix128();
 
     // For an even playing field make sure that all benchmarking loops are equivalently aligned
-    asm volatile (".balign 16"); 
+    asm volatile (".balign 16");
 
     start_time = get_time_sec();
     for (uint64_t i = 0; i < num_iterations; ++i)
@@ -133,12 +147,12 @@ int main(int argc, char **argv) {
     // --- Benchmark xoroshiro128++ ---
     printf("\nBenchmarking xoroshiro128++...\n");
 
-    // warmup    
+    // warmup
     for (uint64_t i = 0; i < warmup_iterations; ++i)
         dummyVar = xoroshiro128pp();
 
     // For an even playing field make sure that all benchmarking loops are equivalently aligned
-    asm volatile (".balign 16"); 
+    asm volatile (".balign 16");
 
     start_time = get_time_sec();
     for (uint64_t i = 0; i < num_iterations; ++i)
@@ -152,12 +166,12 @@ int main(int argc, char **argv) {
     // --- Benchmark wyrand ---
     printf("\nBenchmarking wyrand...\n");
 
-    // warmup    
+    // warmup
     for (uint64_t i = 0; i < warmup_iterations; ++i)
         dummyVar = wyrand();
 
     // For an even playing field make sure that all benchmarking loops are equivalently aligned
-    asm volatile (".balign 16"); 
+    asm volatile (".balign 16");
 
     start_time = get_time_sec();
     for (uint64_t i = 0; i < num_iterations; ++i)
@@ -168,7 +182,27 @@ int main(int argc, char **argv) {
     ns_per_call = (duration * 1e9) / num_iterations;
     printf("  wyrand ns/call:         %.3f ns\n", ns_per_call);
 
-    printf("\nBenchmark complete.\n");
+    // --- Benchmark PCG64 ---
+    printf("\nBenchmarking PCG64...\n");
 
+    // warmup
+    for (uint64_t i = 0; i < warmup_iterations; ++i)
+        dummyVar = pcg64_random();
+
+    // For an even playing field make sure that all benchmarking loops are equivalently aligned
+    asm volatile (".balign 16");
+
+    start_time = get_time_sec();
+    for (uint64_t i = 0; i < num_iterations; ++i)
+        dummyVar = pcg64_random();
+
+    end_time = get_time_sec();
+    duration = end_time - start_time;
+    ns_per_call = (duration * 1e9) / num_iterations;
+    printf("  PCG64 ns/call:          %.3f ns\n", ns_per_call);
+
+
+    printf("\nBenchmark complete.\n");
+    (void)dummyVar; // To prevent unused variable warning if iterations are zero.
     return 0;
 }
