@@ -12,7 +12,7 @@ This repository contains `LoopMix128`, an extremely fast pseudo-random number ge
 
 ## Performance
 
-* **Speed:** 8.75x Java random, 21% faster than Java xoroshiro128++, 98% faster than C xoroshiro128++ ([benchmark](benchmark_out.txt))
+* **Speed:** 8.75x Java random, 21% faster than Java xoroshiro128++, 98% faster than C xoroshiro128++ and PCG64 ([benchmark](benchmark_out.txt))
 * Passed 256M to 32TB PractRand with zero anomalies ([results](test_practrand_out.txt))
 * Passed BigCrush with these lowest p-values: ([results](test_bigcrush_out.txt))
     * `0.01` sknuth_MaxOft (N=20, n=10000000, r=0, d=100000, t=32), Sum ChiSqr
