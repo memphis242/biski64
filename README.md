@@ -1,13 +1,13 @@
-# LoopMix128: Fast and Robust 2^128 Period Pseudo-Random Number Generator
+# LoopMix128: Fast and Robust 2^128 Period PRNG
 
-This repository contains `LoopMix128`, an extremely fast pseudo-random number generator (PRNG) with a guaranteed period of 2^128, proven injectivity, and clean passes in both BigCrush and PractRand (32T). It is designed for non-cryptographic applications where speed and statistical quality are important.
+This repository contains `LoopMix128`, an extremely fast pseudo-random number generator (PRNG) with a guaranteed period of 2^128, proven injectivity, and clean passes in both BigCrush and PractRand (32TB). It is designed for non-cryptographic applications where speed and statistical quality are important.
 
 ## Features
 
 * **High Performance:** Significantly faster than standard library generators and competitive with or faster than other modern high-speed PRNGs like wyrand and xoroshiro128++.
-* **Good Statistical Quality:** Has passed TestU01's BigCrush suite and PractRand (512MB to 32TB) with zero anomalies.
+* **Good Statistical Quality:** Has passed TestU01's BigCrush suite and PractRand (up to 32TB) with zero anomalies.
 * **2^128 Period:** Minimum period length of 2^128 through its 128 bit low/high counter looping.
-* **Proven Injective:** Z3 Prover proven injectivity across it's 192 bit state.
+* **Proven Injectivity:** Z3 Prover proven injectivity across its 192 bit state. ([z3 script](check_injective.z3)) ([results](check_injective_out.txt))
 
 ## Performance
 
