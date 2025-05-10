@@ -1,0 +1,16 @@
+>> gcc --version
+gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+
+>> gcc -o benchmark benchmark.c -O3 -march=native && ./benchmark
+Benchmarking PRNGs for 10000000000 iterations...
+
+Benchmarking LoopMix128...
+  LoopMix128 ns/call:     0.458 ns
+
+Benchmarking xoroshiro128++...
+  xoroshiro128++ ns/call: 0.802 ns
+
+Benchmarking wyrand...
+  wyrand ns/call:         0.449 ns
+
+Benchmark complete.

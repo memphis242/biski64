@@ -1,0 +1,5 @@
+>> z3 --version
+Z3 version 4.8.12 - 64 bit
+
+>> z3 check_injective.z3 
+unsat
