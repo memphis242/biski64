@@ -8,6 +8,7 @@ This repository contains `LoopMix128`, an extremely fast pseudo-random number ge
 * **Good Statistical Quality:** Has passed TestU01's BigCrush suite and PractRand (up to 32TB) with zero anomalies.
 * **2^128 Period:** Minimum period length of 2^128 through its 128 bit low/high counter looping.
 * **Proven Injectivity:** Z3 Prover proven injectivity across its 192 bit state. ([z3 script](check_injective.z3)) ([results](check_injective_out.txt))
+* **Parallel Streams:** The injective 192 bit state facilitates parallel streams as outlined below.
 
 ## Performance
 
@@ -53,6 +54,13 @@ uint64_t loopMix128() {
 ```
 
 *(Note: The code above shows the core logic. See implementation files for full seeding and usage examples.)*
+
+
+## Parallel Streams
+
+Thanks to the proven injectivity of the 192 bit state of LoopMix128, parallel streams can be implemented as follows:
+* Simply randomly seed fast_loop, slow_loop, and mix and take advantage of the large 2^192 injective state which makes collisions incredibly improbable.
+* Or, if absolutely critical - randomly seed fast_loop and mix for each stream and manually assign slow_loop uniquely to each stream taking into account that slow_loop normally increases by GR at the end of every 2^64 cycle (spacing slow_loop evenly across the streams).
 
 
 ## PractRand Testing (With Varied Seeds)
