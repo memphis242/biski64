@@ -26,10 +26,20 @@ uint64_t wyrand_seed = 0xDEADBEEF12345678ULL;
 uint64_t pcg_state = 0x853c49e6748fea9bULL; // Standard PCG initial state
 uint64_t pcg_inc = 0xda3e39cb94b95bdbULL;   // Standard PCG increment (must be odd)
 
+// For RomuQuad
+uint64_t romu_wq = 0xDEADBEEF12345678ULL;
+uint64_t romu_xq = 0xABCDEF0123456789ULL;
+uint64_t romu_yq = 0x123456789ABCDEF0ULL;
+uint64_t romu_zq = 0xFEDCBA9876543210ULL;
+
+// For RomuDuoJr
+uint64_t romu_x_duojr = 0xDEADBEEF12345678ULL;
+uint64_t romu_y_duojr = 0xABCDEF0123456789ULL;
+
 
 // --- Helper Functions ---
 
-// Rotate left function (used by LoopMix and xoroshiro)
+// Rotate left function (used by LoopMix, xoroshiro, RomuQuad, RomuDuoJr)
 inline uint64_t rotateLeft(const uint64_t x, int k) {
     return (x << k) | (x >> (64 - k));
 }
@@ -98,6 +108,25 @@ inline uint64_t pcg64_random(void) {
     // Output function (PCG XSL RR):
     uint64_t xsh = ((oldstate >> 22u) ^ oldstate);
     return rotateRight(xsh, (oldstate >> 61u) + 22u);
+}
+
+// RomuQuad generator function
+inline uint64_t romuQuad(void) {
+   uint64_t wp = romu_wq, xp = romu_xq, yp = romu_yq, zp = romu_zq;
+   romu_wq = 15241094284759029579u * zp; // a-mult
+   romu_xq = zp + rotateLeft(wp, 52);    // b-rotl, c-add
+   romu_yq = yp - xp;                    // d-sub
+   romu_zq = yp + wp;                    // e-add
+   romu_zq = rotateLeft(romu_zq, 19);    // f-rotl
+   return xp;
+}
+
+// RomuDuoJr generator function
+inline uint64_t romuDuoJr(void) {
+   uint64_t xp = romu_x_duojr;
+   romu_x_duojr = 15241094284759029579u * romu_y_duojr;
+   romu_y_duojr = rotateLeft(romu_y_duojr, 37) - xp;
+   return xp;
 }
 
 
@@ -200,6 +229,44 @@ int main(int argc, char **argv) {
     duration = end_time - start_time;
     ns_per_call = (duration * 1e9) / num_iterations;
     printf("  PCG64 ns/call:          %.3f ns\n", ns_per_call);
+
+    // --- Benchmark RomuQuad ---
+    printf("\nBenchmarking RomuQuad...\n");
+
+    // warmup
+    for (uint64_t i = 0; i < warmup_iterations; ++i)
+        dummyVar = romuQuad();
+
+    // For an even playing field make sure that all benchmarking loops are equivalently aligned
+    asm volatile (".balign 16");
+
+    start_time = get_time_sec();
+    for (uint64_t i = 0; i < num_iterations; ++i)
+        dummyVar = romuQuad();
+
+    end_time = get_time_sec();
+    duration = end_time - start_time;
+    ns_per_call = (duration * 1e9) / num_iterations;
+    printf("  RomuQuad ns/call:       %.3f ns\n", ns_per_call);
+
+    // --- Benchmark RomuDuoJr ---
+    printf("\nBenchmarking RomuDuoJr...\n");
+
+    // warmup
+    for (uint64_t i = 0; i < warmup_iterations; ++i)
+        dummyVar = romuDuoJr();
+
+    // For an even playing field make sure that all benchmarking loops are equivalently aligned
+    asm volatile (".balign 16");
+
+    start_time = get_time_sec();
+    for (uint64_t i = 0; i < num_iterations; ++i)
+        dummyVar = romuDuoJr();
+
+    end_time = get_time_sec();
+    duration = end_time - start_time;
+    ns_per_call = (duration * 1e9) / num_iterations;
+    printf("  RomuDuoJr ns/call:      %.3f ns\n", ns_per_call);
 
 
     printf("\nBenchmark complete.\n");
