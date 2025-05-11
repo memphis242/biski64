@@ -5,15 +5,21 @@ gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
 Benchmarking PRNGs for 10000000000 iterations...
 
 Benchmarking LoopMix128...
-  LoopMix128 ns/call:     0.371 ns
+  LoopMix128 ns/call:     0.380 ns
 
 Benchmarking xoroshiro128++...
-  xoroshiro128++ ns/call: 0.736 ns
+  xoroshiro128++ ns/call: 0.757 ns
 
 Benchmarking wyrand...
-  wyrand ns/call:         0.370 ns
+  wyrand ns/call:         0.379 ns
 
 Benchmarking PCG64...
-  PCG64 ns/call:          0.736 ns
+  PCG64 ns/call:          0.757 ns
+
+Benchmarking RomuQuad...
+  RomuQuad ns/call:       0.575 ns
+
+Benchmarking RomuDuoJr...
+  RomuDuoJr ns/call:      0.416 ns
 
 Benchmark complete.
