@@ -6,9 +6,11 @@ This repository contains `LoopMix128`, an extremely fast pseudo-random number ge
 
 * **High Performance:** Significantly faster than standard library generators and competitive with or faster than other modern high-speed PRNGs like wyrand and xoroshiro128++.
 * **Good Statistical Quality:** Has passed TestU01's BigCrush suite and PractRand (up to 32TB) with zero anomalies.
-* **2^128 Period:** Minimum period length of 2^128 through its 128 bit low/high counter looping.
+* ~**Guaranteed Period:** Minimum period length of 2^128 through its 128 bit low/high counter looping.~
 * **Proven Injectivity:** Z3 Prover proven injectivity across its 192 bit state. ([z3 script](check_injective.z3)) ([results](check_injective_out.txt))
 * **Parallel Streams:** The injective 192 bit state facilitates parallel streams as outlined below.
+
+*Note: I found a counterexample using Z3 Solver in which fast_loop maps to itself (0x5050a1e1d03b6432). A new version will be released with fast_loop and slow_loop as simple Weyl Sequences.*
 
 ## Performance
 
