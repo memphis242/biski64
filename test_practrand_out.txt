@@ -5,69 +5,69 @@ RNG = RNG_stdin64, seed = unknown
 test set = core, folding = standard (64 bit)
 
 rng=RNG_stdin64, seed=unknown
-length= 512 megabytes (2^29 bytes), time= 3.0 seconds
+length= 512 megabytes (2^29 bytes), time= 3.4 seconds
   no anomalies in 226 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 1 gigabyte (2^30 bytes), time= 6.2 seconds
+length= 1 gigabyte (2^30 bytes), time= 7.2 seconds
   no anomalies in 243 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 2 gigabytes (2^31 bytes), time= 12.5 seconds
+length= 2 gigabytes (2^31 bytes), time= 14.3 seconds
   no anomalies in 261 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 4 gigabytes (2^32 bytes), time= 24.5 seconds
+length= 4 gigabytes (2^32 bytes), time= 28.2 seconds
   no anomalies in 277 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 8 gigabytes (2^33 bytes), time= 49.0 seconds
+length= 8 gigabytes (2^33 bytes), time= 56.3 seconds
   no anomalies in 294 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 16 gigabytes (2^34 bytes), time= 97.5 seconds
+length= 16 gigabytes (2^34 bytes), time= 112 seconds
   no anomalies in 310 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 32 gigabytes (2^35 bytes), time= 193 seconds
+length= 32 gigabytes (2^35 bytes), time= 222 seconds
   no anomalies in 325 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 64 gigabytes (2^36 bytes), time= 388 seconds
+length= 64 gigabytes (2^36 bytes), time= 445 seconds
   no anomalies in 340 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 128 gigabytes (2^37 bytes), time= 776 seconds
+length= 128 gigabytes (2^37 bytes), time= 890 seconds
   no anomalies in 355 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 256 gigabytes (2^38 bytes), time= 1544 seconds
+length= 256 gigabytes (2^38 bytes), time= 1770 seconds
   no anomalies in 369 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 512 gigabytes (2^39 bytes), time= 3105 seconds
+length= 512 gigabytes (2^39 bytes), time= 3561 seconds
   no anomalies in 383 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 1 terabyte (2^40 bytes), time= 6215 seconds
+length= 1 terabyte (2^40 bytes), time= 7154 seconds
   no anomalies in 397 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 2 terabytes (2^41 bytes), time= 12371 seconds
+length= 2 terabytes (2^41 bytes), time= 14250 seconds
   no anomalies in 409 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 4 terabytes (2^42 bytes), time= 24831 seconds
+length= 4 terabytes (2^42 bytes), time= 28666 seconds
   no anomalies in 422 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 8 terabytes (2^43 bytes), time= 49488 seconds
+length= 8 terabytes (2^43 bytes), time= 57750 seconds
   no anomalies in 434 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 16 terabytes (2^44 bytes), time= 98748 seconds
+length= 16 terabytes (2^44 bytes), time= 115539 seconds
   no anomalies in 445 test result(s)
 
 rng=RNG_stdin64, seed=unknown
-length= 32 terabytes (2^45 bytes), time= 198282 seconds
+length= 32 terabytes (2^45 bytes), time= 232168 seconds
   no anomalies in 455 test result(s)
