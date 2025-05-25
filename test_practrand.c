@@ -5,26 +5,28 @@
 
 const uint64_t GR = 0x9e3779b97f4a7c15L;
 
-uint64_t fast_loop;
-uint64_t slow_loop;
-uint64_t mix;
+// For biski64
+uint64_t fast_loop = 0xDEADBEEF12345678ULL;
+uint64_t mix = 0x123456789ABCDEFULL;
+uint64_t lastMix = 0x123456789ABCDEFULL;
+uint64_t oldRot = 0x1112223334445556;
+uint64_t output = 0x123456789ABCDEFULL;
 
 uint64_t rotateLeft(unsigned long long x, int k) { return (x << k) | (x >> (64 - k)); }
 
 
 // Function that implements the new algorithm and returns raw 64-bit state
-inline uint64_t loopMix128() {
+inline uint64_t biski64() {
 
-uint64_t output = GR * (mix + fast_loop);
+uint64_t newMix = oldRot + output;
 
-if ( fast_loop == 0 )
-  {
-  slow_loop += GR;
-  mix ^= slow_loop;
-  }
+output = GR * mix;
+oldRot = rotateLeft(lastMix, 39);
 
-mix = rotateLeft(mix, 59) + fast_loop;
-fast_loop = rotateLeft(fast_loop, 47) + GR;
+lastMix = fast_loop ^ mix; 
+mix = newMix;
+
+fast_loop += GR;
 
 return output;
 }
@@ -56,13 +58,15 @@ int main(void) {
     uint64_t time_seed = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
 
     fast_loop = splitmix64_next(&time_seed);
-    slow_loop = splitmix64_next(&time_seed);
     mix = splitmix64_next(&time_seed);
+    lastMix = splitmix64_next(&time_seed);
+    oldRot = splitmix64_next(&time_seed);
+    output = splitmix64_next(&time_seed);
 
   uint64_t raw_value;
   // Loop infinitely, generating and writing raw 64-bit values
   for (;;) {
-    raw_value = loopMix128();
+    raw_value = biski64();
     // Write the binary representation of the 64-bit value to stdout
     if (fwrite(&raw_value, sizeof(raw_value), 1, stdout) != 1) {
       // Error writing to stdout (e.g., pipe broken), exit gracefully.
