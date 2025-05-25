@@ -4,47 +4,46 @@
 #include <time.h>   // For clock_gettime
 #include <stdbool.h>
 
-// Golden ratio constant for LoopMix128 - golden ratio fractional part * 2^64
+// Golden ratio constant for biski64 - golden ratio fractional part * 2^64
 const uint64_t GR = 0x9e3779b97f4a7c15ULL;
 
 // --- State Variables (Global for this benchmark) ---
 // Seeded with dummy data for the benchmark
 
-// For LoopMix128
+// For biski64
 uint64_t fast_loop = 0xDEADBEEF12345678ULL;
-uint64_t slow_loop = 0xABCDEF0123456789ULL;
 uint64_t mix = 0x123456789ABCDEFULL;
+uint64_t lastMix = 0x123456789ABCDEFULL;
+uint64_t oldRot = 0x1112223334445556;
+uint64_t output = 0x123456789ABCDEFULL;
+
+// For wyrand
+uint64_t wyrand_seed = 0xDEADBEEF12345678ULL;
+
+// For sfc64
+uint64_t sfc_a = 0xDEADBEEF12345678ULL;
+uint64_t sfc_b = 0xABCDEF0123456789ULL;
+uint64_t sfc_c = 0x123456789ABCDEF0ULL;
+uint64_t sfc_counter = 1ULL;
 
 // For xoroshiro128++
 uint64_t xoro_s0 = 0xDEADBEEF12345678ULL;
 uint64_t xoro_s1 = 0xABCDEF0123456789ULL;
 
-// For wyrand
-uint64_t wyrand_seed = 0xDEADBEEF12345678ULL;
+// For PCG128_XSL_RR_64 (128-bit state, 64-bit output)
+__uint128_t pcg128_state_s = (((__uint128_t)0x9ef029c7934105feULL) << 64) | 0x0bf89139a2398791ULL; // Arbitrary initial state for the 128-bit version
+const __uint128_t pcg128_mult_s  = (((__uint128_t)0x2360ED051FC65DA4ULL) << 64) | 0x4385DF649FCCF645ULL; // Standard 128-bit PCG multiplier
+const __uint128_t pcg128_inc_s   = (((__uint128_t)0x5851F42D4C957F2DULL) << 64) | 0x14057B7EF767814FULL;   // Standard 128-bit PCG increment (is odd)
 
-// For PCG64
-uint64_t pcg_state = 0x853c49e6748fea9bULL; // Standard PCG initial state
-uint64_t pcg_inc = 0xda3e39cb94b95bdbULL;   // Standard PCG increment (must be odd)
-
-// For RomuQuad
-uint64_t romu_wq = 0xDEADBEEF12345678ULL;
-uint64_t romu_xq = 0xABCDEF0123456789ULL;
-uint64_t romu_yq = 0x123456789ABCDEF0ULL;
-uint64_t romu_zq = 0xFEDCBA9876543210ULL;
-
-// For RomuDuoJr
-uint64_t romu_x_duojr = 0xDEADBEEF12345678ULL;
-uint64_t romu_y_duojr = 0xABCDEF0123456789ULL;
 
 
 // --- Helper Functions ---
 
-// Rotate left function (used by LoopMix, xoroshiro, RomuQuad, RomuDuoJr)
 inline uint64_t rotateLeft(const uint64_t x, int k) {
     return (x << k) | (x >> (64 - k));
 }
 
-// Rotate right function (used by PCG64)
+
 inline uint64_t rotateRight(const uint64_t x, int k) {
     return (x >> k) | (x << (64 - k));
 }
@@ -64,20 +63,39 @@ double get_time_sec() {
 // --- PRNG Implementations ---
 
 
-// LoopMix128 generator function
-inline uint64_t loopMix128() {
-    uint64_t output = GR * (mix + fast_loop);
+// biski64 generator function
+inline uint64_t biski64() {
 
-    if ( fast_loop == 0 )
-      {
-      slow_loop += GR;
-      mix ^= slow_loop;
-      }
+uint64_t newMix = oldRot + output;
 
-    mix = rotateLeft(mix, 59) + fast_loop;
-    fast_loop = rotateLeft(fast_loop, 47) + GR;
+output = GR * mix;
+oldRot = rotateLeft(lastMix, 39);
 
-    return output;
+lastMix = fast_loop ^ mix; 
+mix = newMix;
+
+fast_loop += GR;
+
+return output;
+}
+
+
+// Wyrand generator function (requires __uint128_t support)
+inline uint64_t wyrand(void) {
+    wyrand_seed += 0xa0761d6478bd642fULL;
+    __uint128_t t = (__uint128_t)(wyrand_seed ^ 0xe7037ed1a0b428dbULL) * wyrand_seed;
+    return (uint64_t)(t >> 64) ^ (uint64_t)t;
+}
+
+
+// sfc64 generator function
+// Credits: Chris Doty-Humphry (PractRand)
+inline uint64_t sfc64(void) {
+    uint64_t tmp = sfc_a + sfc_b + sfc_counter++;
+    sfc_a = sfc_b ^ (sfc_b >> 11);
+    sfc_b = sfc_c + (sfc_c << 3);
+    sfc_c = rotateLeft(sfc_c, 24) + tmp;
+    return tmp;
 }
 
 
@@ -94,46 +112,26 @@ inline uint64_t xoroshiro128pp(void) {
 }
 
 
-// Wyrand generator function (requires __uint128_t support)
-inline uint64_t wyrand(void) {
-    wyrand_seed += 0xa0761d6478bd642fULL;
-    __uint128_t t = (__uint128_t)(wyrand_seed ^ 0xe7037ed1a0b428dbULL) * wyrand_seed;
-    return (uint64_t)(t >> 64) ^ (uint64_t)t;
-}
+// PCG XSL RR 128/64 generator function (128-bit state, 64-bit output)
+inline uint64_t pcg128_xsl_rr_64_random(void) {
+    // LCG step for 128-bit state
+    pcg128_state_s = pcg128_state_s * pcg128_mult_s + pcg128_inc_s;
 
-// PCG64 (PCG XSL RR 64/64) generator function
-inline uint64_t pcg64_random(void) {
-    uint64_t oldstate = pcg_state;
-    pcg_state = oldstate * 6364136223846793005ULL + (pcg_inc | 1); // LCG step
-    // Output function (PCG XSL RR):
-    uint64_t xsh = ((oldstate >> 22u) ^ oldstate);
-    return rotateRight(xsh, (oldstate >> 61u) + 22u);
-}
-
-// RomuQuad generator function
-inline uint64_t romuQuad(void) {
-   uint64_t wp = romu_wq, xp = romu_xq, yp = romu_yq, zp = romu_zq;
-   romu_wq = 15241094284759029579u * zp; // a-mult
-   romu_xq = zp + rotateLeft(wp, 52);    // b-rotl, c-add
-   romu_yq = yp - xp;                    // d-sub
-   romu_zq = yp + wp;                    // e-add
-   romu_zq = rotateLeft(romu_zq, 19);    // f-rotl
-   return xp;
-}
-
-// RomuDuoJr generator function
-inline uint64_t romuDuoJr(void) {
-   uint64_t xp = romu_x_duojr;
-   romu_x_duojr = 15241094284759029579u * romu_y_duojr;
-   romu_y_duojr = rotateLeft(romu_y_duojr, 37) - xp;
-   return xp;
+    // Output function (XSL RR variant for 128-bit state, 64-bit output)
+    uint64_t high_bits = (uint64_t)(pcg128_state_s >> 64);
+    uint64_t low_bits  = (uint64_t)pcg128_state_s;
+    
+    uint64_t xorshifted = high_bits ^ low_bits; 
+    // Rotation amount is determined by the top 6 bits of the high part of the updated state
+    int rotation = (int)(high_bits >> 58u); 
+    
+    return rotateRight(xorshifted, rotation);
 }
 
 
 // --- Main Benchmark Routine ---
 int main(int argc, char **argv) {
     uint64_t num_iterations = 10000000000ULL; // Default: 10 Billion iterations
-    uint64_t warmup_iterations = 1000000000ULL; // Default: 1 Billion iterations
 
     // Parse command-line argument for number of iterations
     if (argc > 1) {
@@ -154,50 +152,24 @@ int main(int argc, char **argv) {
     double ns_per_call;
 
 
-    // --- Benchmark LoopMix128 ---
-    printf("Benchmarking LoopMix128...\n");
-
-    // warmup
-    for (uint64_t i = 0; i < warmup_iterations; ++i)
-        dummyVar = loopMix128();
+    // --- Benchmark biski64 ---
+    printf("Benchmarking biski64...\n");
 
     // For an even playing field make sure that all benchmarking loops are equivalently aligned
     asm volatile (".balign 16");
 
     start_time = get_time_sec();
     for (uint64_t i = 0; i < num_iterations; ++i)
-        dummyVar = loopMix128();
+        dummyVar = biski64();
 
     end_time = get_time_sec();
     duration = end_time - start_time;
     ns_per_call = (duration * 1e9) / num_iterations;
-    printf("  LoopMix128 ns/call:     %.3f ns\n", ns_per_call);
+    printf("  biski64 ns/call:     %.3f ns\n", ns_per_call);
 
-    // --- Benchmark xoroshiro128++ ---
-    printf("\nBenchmarking xoroshiro128++...\n");
-
-    // warmup
-    for (uint64_t i = 0; i < warmup_iterations; ++i)
-        dummyVar = xoroshiro128pp();
-
-    // For an even playing field make sure that all benchmarking loops are equivalently aligned
-    asm volatile (".balign 16");
-
-    start_time = get_time_sec();
-    for (uint64_t i = 0; i < num_iterations; ++i)
-        dummyVar = xoroshiro128pp();
-
-    end_time = get_time_sec();
-    duration = end_time - start_time;
-    ns_per_call = (duration * 1e9) / num_iterations;
-    printf("  xoroshiro128++ ns/call: %.3f ns\n", ns_per_call);
 
     // --- Benchmark wyrand ---
     printf("\nBenchmarking wyrand...\n");
-
-    // warmup
-    for (uint64_t i = 0; i < warmup_iterations; ++i)
-        dummyVar = wyrand();
 
     // For an even playing field make sure that all benchmarking loops are equivalently aligned
     asm volatile (".balign 16");
@@ -211,62 +183,53 @@ int main(int argc, char **argv) {
     ns_per_call = (duration * 1e9) / num_iterations;
     printf("  wyrand ns/call:         %.3f ns\n", ns_per_call);
 
-    // --- Benchmark PCG64 ---
-    printf("\nBenchmarking PCG64...\n");
 
-    // warmup
-    for (uint64_t i = 0; i < warmup_iterations; ++i)
-        dummyVar = pcg64_random();
+    // --- Benchmark sfc64 ---
+    printf("\nBenchmarking sfc64...\n");
 
     // For an even playing field make sure that all benchmarking loops are equivalently aligned
     asm volatile (".balign 16");
 
     start_time = get_time_sec();
     for (uint64_t i = 0; i < num_iterations; ++i)
-        dummyVar = pcg64_random();
+        dummyVar = sfc64();
 
     end_time = get_time_sec();
     duration = end_time - start_time;
     ns_per_call = (duration * 1e9) / num_iterations;
-    printf("  PCG64 ns/call:          %.3f ns\n", ns_per_call);
+    printf("  sfc64 ns/call:          %.3f ns\n", ns_per_call);
 
-    // --- Benchmark RomuQuad ---
-    printf("\nBenchmarking RomuQuad...\n");
 
-    // warmup
-    for (uint64_t i = 0; i < warmup_iterations; ++i)
-        dummyVar = romuQuad();
+    // --- Benchmark xoroshiro128++ ---
+    printf("\nBenchmarking xoroshiro128++...\n");
 
     // For an even playing field make sure that all benchmarking loops are equivalently aligned
     asm volatile (".balign 16");
 
     start_time = get_time_sec();
     for (uint64_t i = 0; i < num_iterations; ++i)
-        dummyVar = romuQuad();
+        dummyVar = xoroshiro128pp();
 
     end_time = get_time_sec();
     duration = end_time - start_time;
     ns_per_call = (duration * 1e9) / num_iterations;
-    printf("  RomuQuad ns/call:       %.3f ns\n", ns_per_call);
+    printf("  xoroshiro128++ ns/call: %.3f ns\n", ns_per_call);
 
-    // --- Benchmark RomuDuoJr ---
-    printf("\nBenchmarking RomuDuoJr...\n");
 
-    // warmup
-    for (uint64_t i = 0; i < warmup_iterations; ++i)
-        dummyVar = romuDuoJr();
+    // --- Benchmark PCG128_XSL_RR_64 ---
+    printf("\nBenchmarking PCG128_XSL_RR_64...\n");
 
     // For an even playing field make sure that all benchmarking loops are equivalently aligned
     asm volatile (".balign 16");
 
     start_time = get_time_sec();
     for (uint64_t i = 0; i < num_iterations; ++i)
-        dummyVar = romuDuoJr();
+        dummyVar = pcg128_xsl_rr_64_random();
 
     end_time = get_time_sec();
     duration = end_time - start_time;
     ns_per_call = (duration * 1e9) / num_iterations;
-    printf("  RomuDuoJr ns/call:      %.3f ns\n", ns_per_call);
+    printf("  PCG128_XSL_RR_64 ns/call: %.3f ns\n", ns_per_call);
 
 
     printf("\nBenchmark complete.\n");
