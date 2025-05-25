@@ -1,25 +1,54 @@
-# LoopMix128: Fast and Robust 2^128 Period PRNG
+# biski64: Fast and Robust 2^64 Period Pseudo-Random Number Generator
 
-This repository contains `LoopMix128`, an extremely fast pseudo-random number generator (PRNG) with a guaranteed period of 2^128, proven injectivity, and clean passes in both BigCrush and PractRand (32TB). It is designed for non-cryptographic applications where speed and statistical quality are important.
+This repository contains `biski64`, an extremely fast pseudo-random number generator (PRNG) with a guaranteed period of 2^64. It easily passes PractRand (32TB) and BigCrush. It is designed for non-cryptographic applications where speed and statistical quality are important.
 
 ## Features
 
 * **High Performance:** Significantly faster than standard library generators and competitive with or faster than other modern high-speed PRNGs like wyrand and xoroshiro128++.
-* **Good Statistical Quality:** Has passed TestU01's BigCrush suite and PractRand (up to 32TB) with zero anomalies.
-* ~**Guaranteed Period:** Minimum period length of 2^128 through its 128 bit low/high counter looping.~
-* **Proven Injectivity:** Z3 Prover proven injectivity across its 192 bit state. ([z3 script](check_injective.z3)) ([results](check_injective_out.txt))
-* **Parallel Streams:** The injective 192 bit state facilitates parallel streams as outlined below.
-
-*Note: I found a counterexample using Z3 Solver in which fast_loop maps to itself (0x5050a1e1d03b6432). A new version will be released with fast_loop and slow_loop as simple Weyl Sequences.*
+* **Good Statistical Quality:** Has passed PractRand (512MB to 32TB) with zero anomalies. Tested in BigCrush 100 times with exceptional results (see below).
+* **2^64 Period:** Minimum period length of 2^64 through its incorporated 64 bit Weyl sequence.
+* **Parallel Streams:** The 64bit Weyl sequence facilitates parallel streams as outlined below.
 
 ## Performance
 
-* **Speed:** 8.75x Java random, 21% faster than Java xoroshiro128++, 98% faster than C xoroshiro128++ and PCG64 ([benchmark](benchmark_out.txt))
-* Passed 256M to 32TB PractRand with zero anomalies ([results](test_practrand_out.txt))
-* Passed BigCrush with these lowest p-values: ([results](test_bigcrush_out.txt))
-    * `0.01` sknuth_MaxOft (N=20, n=10000000, r=0, d=100000, t=32), Sum ChiSqr
-    * `0.02` sknuth_CouponCollector (N=1, n=200000000, r=27, d=8), ChiSqr
-    * `0.02` svaria_WeightDistrib (N=1, n=20000000, r=28, k=256, Alpha=0, Beta=0.25), ChiSqr
+* **Speed:** 92% faster than C xoroshiro128++
+
+```
+  biski64            0.418 ns/call
+  wyrand             0.449 ns/call
+  sfc64              0.451 ns/call
+  xoroshiro128++     0.802 ns/call
+  PCG128_XSL_RR_64   1.204 ns/call
+```
+
+
+## BigCrush
+
+BigCrush was run 100 times on `biski64` (as well as on the below mentioned reference PRNGs).
+
+Assuming test failure with a p-value below 0.001 or above 0.999 implies a 0.2% probability of a single test yielding a "false positive" purely by chance with an ideal generator. Running BigCrush 100 times (for a total of 25400 sub-tests), around 50.8 such chance "errors" would be anticipated.
+
+```
+biski64, 46 failed subtests (out of 25400 total)
+  2 subtests failed twice
+
+wyrand, 55 failed subtests (out of 25400 total)
+  1 subtest failed THREE times
+  5 subtests failed twice
+
+sfc64, 70 failed subtests (out of 25400 total)
+  1 subtest failed THREE times
+  12 subtests failed twice
+
+xoroshiro128++, 54 failed subtests (out of 25400 total)
+  1 subtest failed FOUR times
+  4 subtests failed twice
+
+pcg128_xsl_rr_64, 47 failed subtests (out of 25400 total)
+  1 subtest failed FIVE times
+  4 subtests failed twice
+```
+
 
 ## Algorithm Details
 
@@ -28,54 +57,58 @@ This repository contains `LoopMix128`, an extremely fast pseudo-random number ge
 const uint64_t GR = 0x9e3779b97f4a7c15ULL;
 
 // Initialized to non-zero with SplitMix64 (or equivalent)
-uint64_t slow_loop, fast_loop, mix; 
+uint64_t fast_loop, mix, lastMix, oldRot, output; 
 
 // Helper for rotation
 static inline uint64_t rotateLeft(const uint64_t x, int k) {
     return (x << k) | (x >> (64 - k));
 }
 
-// --- LoopMix128 ---
-uint64_t loopMix128() {
-  uint64_t output = GR * (mix + fast_loop);
+// --- biski64 ---
+uint64_t biski64() {
+  uint64_t newMix = oldRot + output;
 
-  // slow_loop acts as a looping high counter (updating once per 2^64 calls) to ensure a 2^128 period
-  if ( fast_loop == 0 ) {
-    slow_loop += GR;
-    mix ^= slow_loop;
-    }
+  output = GR * mix;
+  oldRot = rotateLeft(lastMix, 39);
 
-  // A persistent non-linear mix that does not affect the period of fast_loop and slow_loop
-  mix = rotateLeft(mix, 59) + fast_loop;
+  lastMix = fast_loop ^ mix; 
+  mix = newMix;
 
-  // fast_loop loops over a period of 2^64
-  fast_loop = rotateLeft(fast_loop, 47) + GR;
+  fast_loop += GR;
 
   return output;
   }
 ```
 
-*(Note: The code above shows the core logic. See implementation files for full seeding and usage examples.)*
+*(Note: See test files for full seeding and usage examples.)*
 
 
 ## Parallel Streams
 
-Thanks to the proven injectivity of the 192 bit state of LoopMix128, parallel streams can be implemented as follows:
-* Simply randomly seed fast_loop, slow_loop, and mix and take advantage of the large 2^192 injective state which makes collisions incredibly improbable.
-* Or, if absolutely critical - randomly seed fast_loop and mix for each stream and manually assign slow_loop uniquely to each stream taking into account that slow_loop normally increases by GR at the end of every 2^64 cycle (spacing slow_loop evenly across the streams).
+The Weyl sequence of `biski64` is well-suited for parallel applications, and parallel streams can be implemented as follows:
+* Randomly seed `mix`, `lastMix`, `oldRot` and `output` for each stream as normal.
+* Assign a unique starting value to the `fast_loop` counter for each stream. To ensure maximal separation between sequences, these starting values should be spaced far apart. A simple strategy is to assign the i-th stream's counter as:
+```fast_loop_i = initial_fast_loop_seed + i * GR;```
+
+*where i is the stream index (0, 1, 2, ...) and `GR` is the golden ratio constant (0x9e3779b97f4a7c15ULL).*
 
 
-## PractRand Testing (With Varied Seeds)
+## Reduced State Performance
 
-As running BigCrush and PractRand can behave differently depending on initial seeded states, PractRand was also run multiple times from 256M to 8GB using varied initial seeds (seeding with SplitMix64). Below are the counts of total suspicious results when running PractRand 1000 times for LoopMix128 and some reference PRNGs:
+For testing, the mixer core of `biski64` has been reduced to 64bits total state (without the Weyl sequence).  This reduced test version passes 16TB of PractRand.
 
 ```
-LoopMix128          0 failures, 24 suspicious
-xoroshiro256++      0 failures, 27 suspicious
-xoroshiro128++      0 failures, 28 suspicious
-wyrand              0 failures, 32 suspicious
-/dev/urandom        0 failures, 37 suspicious
+uint32_t output = GR * mix;
+uint32_t oldRot = rotateLeft(lastMix, 11);
+
+lastMix = GR ^ mix;
+mix = oldRot + output;
+
+return output;
 ```
 
-## Creation
-Created by Daniel Cota after he fell down the PRNG rabbit-hole by circumstance.
+*(Note: This a for reduced state demonstration only. Use the above full `biski64()` implementation to ensure pipelined performance and the minimum period length of 2^64.)*
+
+
+## Notes
+Created by Daniel Cota and named after his cat Biscuit - a small and fast Egyptian Mau.
