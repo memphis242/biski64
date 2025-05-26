@@ -17,6 +17,7 @@ This repository contains `biski64`, an extremely fast pseudo-random number gener
   biski64            0.418 ns/call
   wyrand             0.449 ns/call
   sfc64              0.451 ns/call
+  xoshiro256++       0.593 ns/call
   xoroshiro128++     0.802 ns/call
   PCG128_XSL_RR_64   1.204 ns/call
 ```
