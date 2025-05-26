@@ -44,6 +44,10 @@ xoroshiro128++, 54 failed subtests (out of 25400 total)
   1 subtest failed FOUR times
   4 subtests failed twice
 
+xoroshiro256++, 60 failed subtests (out of 25400 total)
+  1 subtest failed THREE times
+  5 subtests failed twice
+
 pcg128_xsl_rr_64, 47 failed subtests (out of 25400 total)
   1 subtest failed FIVE times
   4 subtests failed twice
