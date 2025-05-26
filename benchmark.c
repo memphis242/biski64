@@ -30,6 +30,9 @@ uint64_t sfc_counter = 1ULL;
 uint64_t xoro_s0 = 0xDEADBEEF12345678ULL;
 uint64_t xoro_s1 = 0xABCDEF0123456789ULL;
 
+// For xoroshiro256++
+uint64_t xoro256_s[4] = { 0xDEADBEEF12345678ULL, 0xABCDEF0123456789ULL, 0x123456789ABCDEF0ULL, 0xFEDCBA9876543210ULL };
+
 // For PCG128_XSL_RR_64 (128-bit state, 64-bit output)
 __uint128_t pcg128_state_s = (((__uint128_t)0x9ef029c7934105feULL) << 64) | 0x0bf89139a2398791ULL; // Arbitrary initial state for the 128-bit version
 const __uint128_t pcg128_mult_s  = (((__uint128_t)0x2360ED051FC65DA4ULL) << 64) | 0x4385DF649FCCF645ULL; // Standard 128-bit PCG multiplier
@@ -71,7 +74,7 @@ uint64_t newMix = oldRot + output;
 output = GR * mix;
 oldRot = rotateLeft(lastMix, 39);
 
-lastMix = fast_loop ^ mix; 
+lastMix = fast_loop ^ mix;
 mix = newMix;
 
 fast_loop += GR;
@@ -111,6 +114,25 @@ inline uint64_t xoroshiro128pp(void) {
     return result;
 }
 
+// xoroshiro256++ generator function
+// Credits: David Blackman and Sebastiano Vigna
+inline uint64_t xoroshiro256pp(void) {
+	const uint64_t result = rotateLeft(xoro256_s[0] + xoro256_s[3], 23) + xoro256_s[0];
+
+	const uint64_t t = xoro256_s[1] << 17;
+
+	xoro256_s[2] ^= xoro256_s[0];
+	xoro256_s[3] ^= xoro256_s[1];
+	xoro256_s[1] ^= xoro256_s[2];
+	xoro256_s[0] ^= xoro256_s[3];
+
+	xoro256_s[2] ^= t;
+
+	xoro256_s[3] = rotateLeft(xoro256_s[3], 45);
+
+	return result;
+}
+
 
 // PCG XSL RR 128/64 generator function (128-bit state, 64-bit output)
 inline uint64_t pcg128_xsl_rr_64_random(void) {
@@ -120,11 +142,11 @@ inline uint64_t pcg128_xsl_rr_64_random(void) {
     // Output function (XSL RR variant for 128-bit state, 64-bit output)
     uint64_t high_bits = (uint64_t)(pcg128_state_s >> 64);
     uint64_t low_bits  = (uint64_t)pcg128_state_s;
-    
-    uint64_t xorshifted = high_bits ^ low_bits; 
+
+    uint64_t xorshifted = high_bits ^ low_bits;
     // Rotation amount is determined by the top 6 bits of the high part of the updated state
-    int rotation = (int)(high_bits >> 58u); 
-    
+    int rotation = (int)(high_bits >> 58u);
+
     return rotateRight(xorshifted, rotation);
 }
 
@@ -214,6 +236,22 @@ int main(int argc, char **argv) {
     duration = end_time - start_time;
     ns_per_call = (duration * 1e9) / num_iterations;
     printf("  xoroshiro128++ ns/call: %.3f ns\n", ns_per_call);
+
+
+    // --- Benchmark xoroshiro256++ ---
+    printf("\nBenchmarking xoroshiro256++...\n");
+
+    // For an even playing field make sure that all benchmarking loops are equivalently aligned
+    asm volatile (".balign 16");
+
+    start_time = get_time_sec();
+    for (uint64_t i = 0; i < num_iterations; ++i)
+        dummyVar = xoroshiro256pp();
+
+    end_time = get_time_sec();
+    duration = end_time - start_time;
+    ns_per_call = (duration * 1e9) / num_iterations;
+    printf("  xoroshiro256++ ns/call: %.3f ns\n", ns_per_call);
 
 
     // --- Benchmark PCG128_XSL_RR_64 ---
