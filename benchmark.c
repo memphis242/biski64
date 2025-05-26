@@ -30,7 +30,7 @@ uint64_t sfc_counter = 1ULL;
 uint64_t xoro_s0 = 0xDEADBEEF12345678ULL;
 uint64_t xoro_s1 = 0xABCDEF0123456789ULL;
 
-// For xoroshiro256++
+// For xoshiro256++
 uint64_t xoro256_s[4] = { 0xDEADBEEF12345678ULL, 0xABCDEF0123456789ULL, 0x123456789ABCDEF0ULL, 0xFEDCBA9876543210ULL };
 
 // For PCG128_XSL_RR_64 (128-bit state, 64-bit output)
@@ -114,9 +114,10 @@ inline uint64_t xoroshiro128pp(void) {
     return result;
 }
 
-// xoroshiro256++ generator function
+// xoshiro256++ generator function
 // Credits: David Blackman and Sebastiano Vigna
-inline uint64_t xoroshiro256pp(void) {
+inline uint64_t xoshiro256pp(void) {
+
 	const uint64_t result = rotateLeft(xoro256_s[0] + xoro256_s[3], 23) + xoro256_s[0];
 
 	const uint64_t t = xoro256_s[1] << 17;
@@ -238,20 +239,20 @@ int main(int argc, char **argv) {
     printf("  xoroshiro128++ ns/call: %.3f ns\n", ns_per_call);
 
 
-    // --- Benchmark xoroshiro256++ ---
-    printf("\nBenchmarking xoroshiro256++...\n");
+    // --- Benchmark xoshiro256++ ---
+    printf("\nBenchmarking xoshiro256++...\n");
 
     // For an even playing field make sure that all benchmarking loops are equivalently aligned
     asm volatile (".balign 16");
 
     start_time = get_time_sec();
     for (uint64_t i = 0; i < num_iterations; ++i)
-        dummyVar = xoroshiro256pp();
+        dummyVar = xoshiro256pp();
 
     end_time = get_time_sec();
     duration = end_time - start_time;
     ns_per_call = (duration * 1e9) / num_iterations;
-    printf("  xoroshiro256++ ns/call: %.3f ns\n", ns_per_call);
+    printf("  xoshiro256++ ns/call: %.3f ns\n", ns_per_call);
 
 
     // --- Benchmark PCG128_XSL_RR_64 ---
