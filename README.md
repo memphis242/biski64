@@ -29,7 +29,7 @@ BigCrush was run 100 times on `biski64` (as well as on the below mentioned refer
 Assuming test failure with a p-value below 0.001 or above 0.999 implies a 0.2% probability of a single test yielding a "false positive" purely by chance with an ideal generator. Running BigCrush 100 times (for a total of 25400 sub-tests), around 50.8 such chance "errors" would be anticipated.
 
 ```
-biski64, 46 failed subtests (out of 25400 total)
+biski64, 47 failed subtests (out of 25400 total)
   2 subtests failed twice
 
 wyrand, 55 failed subtests (out of 25400 total)
@@ -69,7 +69,7 @@ uint64_t biski64() {
   uint64_t newMix = oldRot + output;
 
   output = GR * mix;
-  oldRot = rotateLeft(lastMix, 39);
+  oldRot = rotateLeft(lastMix, 18);
 
   lastMix = fast_loop ^ mix; 
   mix = newMix;
