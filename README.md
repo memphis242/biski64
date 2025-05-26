@@ -23,38 +23,6 @@ This repository contains `biski64`, an extremely fast pseudo-random number gener
 ```
 
 
-## BigCrush
-
-BigCrush was run 100 times on `biski64` (as well as on the below mentioned reference PRNGs).
-
-Assuming test failure with a p-value below 0.001 or above 0.999 implies a 0.2% probability of a single test yielding a "false positive" purely by chance with an ideal generator. Running BigCrush 100 times (for a total of 25400 sub-tests), around 50.8 such chance "errors" would be anticipated.
-
-```
-biski64, 47 failed subtests (out of 25400 total)
-  2 subtests failed twice
-
-wyrand, 55 failed subtests (out of 25400 total)
-  1 subtest failed THREE times
-  5 subtests failed twice
-
-sfc64, 70 failed subtests (out of 25400 total)
-  1 subtest failed THREE times
-  12 subtests failed twice
-
-xoroshiro128++, 54 failed subtests (out of 25400 total)
-  1 subtest failed FOUR times
-  4 subtests failed twice
-
-xoroshiro256++, 60 failed subtests (out of 25400 total)
-  1 subtest failed THREE times
-  5 subtests failed twice
-
-pcg128_xsl_rr_64, 47 failed subtests (out of 25400 total)
-  1 subtest failed FIVE times
-  4 subtests failed twice
-```
-
-
 ## Algorithm Details
 
 ```
@@ -86,6 +54,38 @@ uint64_t biski64() {
 ```
 
 *(Note: See test files for full seeding and usage examples.)*
+
+
+## BigCrush
+
+BigCrush was run 100 times on `biski64` (as well as on the below mentioned reference PRNGs).
+
+Assuming test failure with a p-value below 0.001 or above 0.999 implies a 0.2% probability of a single test yielding a "false positive" purely by chance with an ideal generator. Running BigCrush 100 times (for a total of 25400 sub-tests), around 50.8 such chance "errors" would be anticipated.
+
+```
+biski64, 47 failed subtests (out of 25400 total)
+  2 subtests failed twice
+
+wyrand, 55 failed subtests (out of 25400 total)
+  1 subtest failed THREE times
+  5 subtests failed twice
+
+sfc64, 70 failed subtests (out of 25400 total)
+  1 subtest failed THREE times
+  12 subtests failed twice
+
+xoroshiro128++, 54 failed subtests (out of 25400 total)
+  1 subtest failed FOUR times
+  4 subtests failed twice
+
+xoroshiro256++, 60 failed subtests (out of 25400 total)
+  1 subtest failed THREE times
+  5 subtests failed twice
+
+pcg128_xsl_rr_64, 47 failed subtests (out of 25400 total)
+  1 subtest failed FIVE times
+  4 subtests failed twice
+```
 
 
 ## Parallel Streams
