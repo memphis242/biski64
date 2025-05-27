@@ -17,7 +17,7 @@ Add `biski64` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-biski64 = "0.1.6"
+biski64 = "0.1.7"
 ```
 
 ### Basic Usage
@@ -158,10 +158,15 @@ The Weyl sequence of `biski64` is well-suited for parallel applications, and par
 *where i is the stream index (0, 1, 2, ...) and `GR` is the golden ratio constant (0x9e3779b97f4a7c15ULL).*
 
 
-## Reduced State Performance
+## Design
 
-For testing, the mixer core of `biski64` has been reduced to 64bits total state (without the Weyl sequence).  This reduced test version passes 16TB of PractRand.
+The design process followed modern PRNG principles, focusing on creating a strong core mixer and then combining it with a simple counter to guarantee the period.
 
+1. **Core Mixer:** The initial focus was developing a strong mixer, motivated by M.E. O'Neill's challenge in her post, [Does It Beat the Minimal Standard](https://www.pcg-random.org/posts/does-it-beat-the-minimal-standard.html). The developed mixer core (with 64-bits of state) passes 16TB of PractRand.
+2. **Guaranteed Period:** A Weyl sequence was added to provide a guaranteed minimum period of 2^64. Separating the task of period generation from statistical mixing was a deliberate trade-off.
+3. **Performance:** Finally, additional state variables were introduced to enable instruction-level parallelism for maximum speed.
+
+The reduced state 64-bit core mixer at the heart of the algorithm is as follows:
 ```c
 uint32_t output = GR * mix;
 uint32_t old_rot = rotateLeft(last_mix, 11);
@@ -172,7 +177,7 @@ mix = old_rot + output;
 return output;
 ```
 
-*(Note: This a for reduced state demonstration only. Use the above full `biski64()` implementations to ensure pipelined performance and the minimum period length of 2^64.)*
+*(Note: This reduced state mixer is for demonstration only. Use the above full `biski64()` implementations to ensure pipelined performance and the minimum period length of 2^64.)*
 
 
 
