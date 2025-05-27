@@ -13,11 +13,12 @@ The library is available on [crates.io](https://crates.io/crates/biski64) and th
 
 ## Rust Installation
 
-Add `biski64` to your `Cargo.toml` dependencies:
+Add `biski64` and `rand` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-biski64 = "0.1.7"
+biski64 = "0.2.1"
+rand = "0.9"
 ```
 
 ### Basic Usage
