@@ -11,8 +11,14 @@ This repository contains `biski64`, an extremely fast pseudo-random number gener
 
 ## Performance
 
-* **Speed:** 92% faster than C xoroshiro128++
+* **Rust Speed:** 150% faster than C xoroshiro128++
+```
+  biski64            0.366 ns/call
+  wyrand             0.428 ns/call
+  xoroshiro128++     0.934 ns/call
+```
 
+* **C Speed:** 92% faster than C xoroshiro128++
 ```
   biski64            0.418 ns/call
   wyrand             0.449 ns/call
@@ -22,29 +28,49 @@ This repository contains `biski64`, an extremely fast pseudo-random number gener
   PCG128_XSL_RR_64   1.204 ns/call
 ```
 
+## Rust Algorithm
 
-## Algorithm Details
+```
+// Golden ratio fractional part * 2^64
+const GR: Wrapping<u64> = Wrapping(0x9e3779b97f4a7c15);
+
+#[inline(always)]
+pub fn next_u64(&mut self) -> u64 {
+    let old_output = self.output;
+
+    let new_mix = self.old_rot + self.output;
+
+    self.output = GR * self.mix;
+    self.old_rot = Wrapping(self.last_mix.0.rotate_left(18));
+
+    self.last_mix = self.fast_loop ^ self.mix;
+    self.mix = new_mix;
+
+    self.fast_loop = self.fast_loop + GR;
+
+    old_output.0
+}
+```
+
+
+## C Algorithm
 
 ```
 // Golden ratio fractional part * 2^64
 const uint64_t GR = 0x9e3779b97f4a7c15ULL;
-
-// Initialized to non-zero with SplitMix64 (or equivalent)
-uint64_t fast_loop, mix, lastMix, oldRot, output; 
 
 // Helper for rotation
 static inline uint64_t rotateLeft(const uint64_t x, int k) {
     return (x << k) | (x >> (64 - k));
 }
 
-// --- biski64 ---
 uint64_t biski64() {
-  uint64_t newMix = oldRot + output;
+  uint64_t newMix = old_rot + output;
 
   output = GR * mix;
-  oldRot = rotateLeft(lastMix, 18);
+  old_rot = rotateLeft(last_mix, 18);
 
-  lastMix = fast_loop ^ mix; 
+  last_mix = fast_loop ^ mix; 
   mix = newMix;
 
   fast_loop += GR;
@@ -52,7 +78,6 @@ uint64_t biski64() {
   return output;
   }
 ```
-
 *(Note: See test files for full seeding and usage examples.)*
 
 
@@ -86,12 +111,15 @@ pcg128_xsl_rr_64, 47 failed subtests (out of 25400 total)
   1 subtest failed FIVE times
   4 subtests failed twice
 ```
+*(Note: For an ideal random generator, seeing three or more failures for a specific subtest would not be expected.)*
+
+
 
 
 ## Parallel Streams
 
 The Weyl sequence of `biski64` is well-suited for parallel applications, and parallel streams can be implemented as follows:
-* Randomly seed `mix`, `lastMix`, `oldRot` and `output` for each stream as normal.
+* Randomly seed `mix`, `last_mix`, `old_rot` and `output` for each stream as normal.
 * Assign a unique starting value to the `fast_loop` counter for each stream. To ensure maximal separation between sequences, these starting values should be spaced far apart. A simple strategy is to assign the i-th stream's counter as:
 ```fast_loop_i = initial_fast_loop_seed + i * GR;```
 
@@ -104,15 +132,21 @@ For testing, the mixer core of `biski64` has been reduced to 64bits total state 
 
 ```
 uint32_t output = GR * mix;
-uint32_t oldRot = rotateLeft(lastMix, 11);
+uint32_t old_rot = rotateLeft(last_mix, 11);
 
-lastMix = GR ^ mix;
-mix = oldRot + output;
+last_mix = GR ^ mix;
+mix = old_rot + output;
 
 return output;
 ```
 
 *(Note: This a for reduced state demonstration only. Use the above full `biski64()` implementation to ensure pipelined performance and the minimum period length of 2^64.)*
+
+## Third Party Testing
+
+Christopher Wellons (skeeto) has tested `biski64` in his [PRNG Shootout](https://github.com/skeeto/prng64-shootout/commit/b018d283) and [commented in Reddit](https://www.reddit.com/r/C_Programming/comments/1kvhgmh/comment/muc3uvb/?context=3):
+
+>Great stuff! When I plug it into my shootout, it's as fast as dualmix128 (i.e. saturates my benchmark), but with loopmix128's better properties. The 40-byte state is slightly heavy, but not bad at all, and certainly better than the gigantic states of classical PRNGs (Mersenne Twister, Lagged Fibonacci). **As far as I can tell, biski64 would be a good PRNG to deploy in real programs.**
 
 
 ## Notes
