@@ -1,0 +1,25 @@
+[package]
+name = "biski64"
+version = "0.2.1"
+edition = "2021"
+description = "A fast, robust, 64-bit pseudo-random number generator with a guaranteed period of 2^64."
+license = "MIT"
+repository = "https://github.com/danielcota/biski64"
+homepage = "https://github.com/danielcota/biski64"
+documentation = "https://docs.rs/biski64"
+keywords = ["prng", "rng", "random", "fast", "no_std"]
+categories = ["algorithms", "no-std"]
+[dependencies]
+rand_core = "0.9" 
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Only needed for the benchmark comparisons
+rand = "0.9"
+rand_xoshiro = "0.6"
+rand-wyrand = "0.1"
+
+[[bench]]
+name = "prng_competitors"
+harness = false
