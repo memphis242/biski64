@@ -6,7 +6,7 @@ The library is available on [crates.io](https://crates.io/crates/biski64) and th
 
 ## Features
 
-* **High Performance:** Significantly faster than standard library generators modern high-speed PRNGs like `xoroshiro128++` and `xoshiro256++`.
+* **High Performance:** Significantly faster than standard library generators and modern high-speed PRNGs like `xoroshiro128++` and `xoshiro256++`.
 * **Exceptional Statistical Quality:** Has passed PractRand (up to 32TB) with zero anomalies and has shown exceptional results in 100 runs of BigCrush. The core design has been proven to be fundamentally sound through rigorous [scaled down testing](#scaled-down-testing).
 * **Guaranteed 2^64 Period:** Incorporates a 64-bit Weyl sequence to ensure a minimum period of 2^64.
 * **Rust Ecosystem Integration:** The library is `no_std` compatible and implements the standard `RngCore` and `SeedableRng` traits from `rand_core` for easy use.
