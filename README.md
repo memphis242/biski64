@@ -186,7 +186,7 @@ return output;
 
 A key test for any random number generator is to see how it performs when its internal state is drastically reduced. This allows us to practically test its performance within a test suite like PractRand - to see if its core algorithm is truly sound.
 
-`biski64` performs exceptionally in this regard.  Each version passed a volume of data orders of magnitude larger than theoretical limits would predict.
+`biski64` performs exceptionally in this regard.
 
 | biski64 Version  | Total State | Expected Failure Point |	Actual PractRand Result |
 | ------------- | ------------- | ------------- | ------------- |
@@ -195,7 +195,9 @@ A key test for any random number generator is to see how it performs when its in
 		
 The "Expected Failure Point" is the "birthday bound" for a generic generator of a similar size — the point where flaws are statistically expected to appear.
 
-Passing over 500 times more data than this theoretical limit demonstrates that the core mixing function of `biski64` is fundamentally sound and highly effective at masking its internal state, a desirable property among PRNGs.
+For the scaled down mixer with 8-bit state variables (24-bits of state total), the guaranteed minimum period is only 2^8, but `biski64` passes PractRand to 2^21 bytes. This shows that the core mixer is actively synergizing with the 8-bits of the scaled-down Weyl sequence to create longer periods than the minimum.  The 16-bit version also outpeforms the minimal period by orders of magnitude.
+
+Passing over 500 times more data than the theoretical "birthday bound" limit and exceeding the minimal period by orders of magnitude demonstrates that the core mixing function of `biski64` is fundamentally sound and highly effective at masking its internal state, a desirable property among PRNGs.
 
 ```c
 // Non-pipelined 8-bit version used for testing:
