@@ -6,7 +6,7 @@ The library is available on [crates.io](https://crates.io/crates/biski64) and th
 
 ## Features
 
-* **High Performance:** Significantly faster than standard library generators and competitive with or faster than other modern high-speed PRNGs like `wyrand` and `xoroshiro128++`.
+* **High Performance:** Significantly faster than standard library generators modern high-speed PRNGs like `xoroshiro128++` and `xoshiro256++`.
 * **Good Statistical Quality:** Has passed PractRand (up to 32TB) with zero anomalies and has shown exceptional results in 100 runs of BigCrush.
 * **Guaranteed 2^64 Period:** Incorporates a 64-bit Weyl sequence to ensure a minimum period of 2^64.
 * **Rust Ecosystem Integration:** The library is `no_std` compatible and implements the standard `RngCore` and `SeedableRng` traits from `rand_core` for easy use.
@@ -17,7 +17,7 @@ Add `biski64` and `rand` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-biski64 = "0.2.1"
+biski64 = "0.2.2"
 rand = "0.9"
 ```
 
@@ -43,8 +43,8 @@ Christopher Wellons (skeeto) has tested `biski64` in his [PRNG Shootout](https:/
 * **Rust Speed:**
 ```
   biski64            0.366 ns/call
-  wyrand             0.428 ns/call
-  xoroshiro128++     0.934 ns/call
+  xoshiro256++       0.659 ns/call
+  xoroshiro128++     0.879 ns/call
 ```
 
 * **C Speed:**
@@ -178,7 +178,7 @@ mix = old_rot + output;
 return output;
 ```
 
-*(Note: This reduced state mixer is for demonstration only. Use the above full `biski64()` implementations to ensure pipelined performance and the minimum period length of 2^64.)*
+*(Note: This reduced state mixer is for demonstration only. Use the above full implementation to ensure pipelined performance and the minimum period length of 2^64.)*
 
 
 
