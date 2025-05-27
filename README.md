@@ -165,7 +165,7 @@ The Weyl sequence of `biski64` is well-suited for parallel applications, and par
 
 For testing, the mixer core of `biski64` has been reduced to 64bits total state (without the Weyl sequence).  This reduced test version passes 16TB of PractRand.
 
-```
+```c
 uint32_t output = GR * mix;
 uint32_t old_rot = rotateLeft(last_mix, 11);
 
