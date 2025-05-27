@@ -22,7 +22,8 @@ biski64 = "0.1.3"
 
 ### Basic Usage
 
-```use biski64::Biski64Rng;
+```rust
+use biski64::Biski64Rng;
 use rand_core::{RngCore, SeedableRng};
 
 // Create a new generator from a simple 64-bit seed.
@@ -60,7 +61,7 @@ Christopher Wellons (skeeto) has tested `biski64` in his [PRNG Shootout](https:/
 
 ## Rust Algorithm
 
-```
+```rust
 use std::num::Wrapping;
 
 // In the actual implementation, these are fields of the Biski64Rng struct.
@@ -89,7 +90,7 @@ pub fn next_u64() -> u64 {
 
 ## C Algorithm
 
-```
+```c
 // Golden ratio fractional part * 2^64
 const uint64_t GR = 0x9e3779b97f4a7c15ULL;
 
