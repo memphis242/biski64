@@ -17,7 +17,7 @@ Add `biski64` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-biski64 = "0.1.1"
+biski64 = "0.1.2"
 ```
 
 ### Basic Usage
