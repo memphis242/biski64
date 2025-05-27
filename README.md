@@ -17,19 +17,16 @@ Add `biski64` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-biski64 = "0.1.4"
+biski64 = "0.1.6"
 ```
 
 ### Basic Usage
 
 ```rust
+use rand::{RngCore, SeedableRng};
 use biski64::Biski64Rng;
-use rand_core::{RngCore, SeedableRng};
 
-// Create a new generator from a simple 64-bit seed.
-let mut rng = Biski64Rng::seed_from_u64(42);
-
-// Generate a random u64 number.
+let mut rng = Biski64Rng::seed_from_u64(12345);
 let num = rng.next_u64();
 ```
 
