@@ -1,6 +1,6 @@
 [package]
 name = "biski64"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "A fast, robust, 64-bit pseudo-random number generator with a guaranteed period of 2^64."
 license = "MIT"
@@ -17,8 +17,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 
 # Only needed for the benchmark comparisons
 rand = "0.9"
-rand_xoshiro = "0.6"
-rand-wyrand = "0.1"
+rand_xoshiro = "0.7"
 
 [[bench]]
 name = "prng_competitors"
