@@ -7,7 +7,7 @@ The library is available on [crates.io](https://crates.io/crates/biski64) and th
 ## Features
 
 * **High Performance:** Significantly faster than standard library generators modern high-speed PRNGs like `xoroshiro128++` and `xoshiro256++`.
-* **Good Statistical Quality:** Has passed PractRand (up to 32TB) with zero anomalies and has shown exceptional results in 100 runs of BigCrush.
+* **Exceptional Statistical Quality:** Has passed PractRand (up to 32TB) with zero anomalies and has shown exceptional results in 100 runs of BigCrush. The core design has been proven to be fundamentally sound through rigorous [scaled down testing](#scaled-down-testing).
 * **Guaranteed 2^64 Period:** Incorporates a 64-bit Weyl sequence to ensure a minimum period of 2^64.
 * **Rust Ecosystem Integration:** The library is `no_std` compatible and implements the standard `RngCore` and `SeedableRng` traits from `rand_core` for easy use.
 
@@ -167,8 +167,9 @@ The design process followed modern PRNG principles, focusing on creating a stron
 2. **Guaranteed Period:** A Weyl sequence was added to provide a guaranteed minimum period of 2^64. Separating the task of period generation from statistical mixing was a deliberate trade-off.
 3. **Performance:** Finally, additional state variables were introduced to enable instruction-level parallelism for maximum speed.
 
-The reduced state 64-bit core mixer at the heart of the algorithm is as follows:
+
 ```c
+// The Reduced state 64-bit core mixer at the heart of the algorithm:
 uint32_t output = GR * mix;
 uint32_t old_rot = rotateLeft(last_mix, 11);
 
@@ -181,6 +182,34 @@ return output;
 *(Note: This reduced state mixer is for demonstration only. Use the above full implementation to ensure pipelined performance and the minimum period length of 2^64.)*
 
 
+## Scaled Down Testing
+
+A key test for any random number generator is to see how it performs when its internal state is drastically reduced. This allows us to practically test its performance within a test suite like PractRand - to see if its core algorithm is truly sound.
+
+`biski64` performs exceptionally in this regard.  Each version passed a volume of data orders of magnitude larger than theoretical limits would predict.
+
+| biski64 Version  | Total State | Expected Failure Point |	Actual PractRand Result |
+| ------------- | ------------- | ------------- | ------------- |
+| 8-bit  | 24 bits | ~4 KB | Passes 2 MB|
+| 16-bit  | 48 bits  | ~32 MB | Passes 16 GB |
+		
+The "Expected Failure Point" is the "birthday bound" for a generic generator of a similar size — the point where flaws are statistically expected to appear.
+
+Passing over 500 times more data than this theoretical limit demonstrates that the core mixing function of `biski64` is fundamentally sound and highly effective at masking its internal state, a desirable property among PRNGs.
+
+```c
+// Non-pipelined 8-bit version used for testing:
+const uint8_t GR = 0x9d;
+
+uint8_t output = GR * mix;
+uint8_t oldRot = rotateLeft(lastMix, 3);
+
+lastMix = fast_loop ^ mix;
+mix = oldRot + output;
+
+fast_loop += GR;
+return output; 
+```
 
 ## Notes
 Created by Daniel Cota and named after his cat Biscuit - a small and fast Egyptian Mau.
