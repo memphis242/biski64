@@ -1,24 +1,54 @@
 # biski64: Fast and Robust 2^64 Period Pseudo-Random Number Generator
 
-This repository contains `biski64`, an extremely fast pseudo-random number generator (PRNG) with a guaranteed period of 2^64. It easily passes PractRand (32TB) and BigCrush. It is designed for non-cryptographic applications where speed and statistical quality are important.
+This repository contains `biski64`, an extremely fast pseudo-random number generator (PRNG) with a guaranteed period of 2^64. It is designed for non-cryptographic applications where speed and statistical quality are important.
+
+The library is available on [crates.io](https://crates.io/crates/biski64) and the documentation can be found on [docs.rs](https://docs.rs/biski64).
 
 ## Features
 
-* **High Performance:** Significantly faster than standard library generators and competitive with or faster than other modern high-speed PRNGs like wyrand and xoroshiro128++.
-* **Good Statistical Quality:** Has passed PractRand (512MB to 32TB) with zero anomalies. Tested in BigCrush 100 times with exceptional results (see below).
-* **2^64 Period:** Minimum period length of 2^64 through its incorporated 64 bit Weyl sequence.
-* **Parallel Streams:** The 64bit Weyl sequence facilitates parallel streams as outlined below.
+* **High Performance:** Significantly faster than standard library generators and competitive with or faster than other modern high-speed PRNGs like `wyrand` and `xoroshiro128++`.
+* **Good Statistical Quality:** Has passed PractRand (up to 32TB) with zero anomalies and has shown exceptional results in 100 runs of BigCrush.
+* **Guaranteed 2^64 Period:** Incorporates a 64-bit Weyl sequence to ensure a minimum period of 2^64.
+* **Rust Ecosystem Integration:** The library is `no_std` compatible and implements the standard `RngCore` and `SeedableRng` traits from `rand_core` for easy use.
+
+## Rust Installation
+
+Add `biski64` to your `Cargo.toml` dependencies:
+
+```toml
+[dependencies]
+biski64 = "0.1.1"
+```
+
+### Basic Usage
+
+```use biski64::Biski64Rng;
+use rand_core::{RngCore, SeedableRng};
+
+// Create a new generator from a simple 64-bit seed.
+let mut rng = Biski64Rng::seed_from_u64(42);
+
+// Generate a random u64 number.
+let num = rng.next_u64();
+```
+
+## Third Party Testing
+
+Christopher Wellons (skeeto) has tested `biski64` in his [PRNG Shootout](https://github.com/skeeto/prng64-shootout/commit/b018d283) and [commented in Reddit](https://www.reddit.com/r/C_Programming/comments/1kvhgmh/comment/muc3uvb/?context=3):
+
+>Great stuff! When I plug it into my shootout, it's as fast as dualmix128 (i.e. saturates my benchmark), but with loopmix128's better properties. The 40-byte state is slightly heavy, but not bad at all, and certainly better than the gigantic states of classical PRNGs (Mersenne Twister, Lagged Fibonacci). **As far as I can tell, biski64 would be a good PRNG to deploy in real programs.**
+
 
 ## Performance
 
-* **Rust Speed:** 150% faster than C xoroshiro128++
+* **Rust Speed:**
 ```
   biski64            0.366 ns/call
   wyrand             0.428 ns/call
   xoroshiro128++     0.934 ns/call
 ```
 
-* **C Speed:** 92% faster than C xoroshiro128++
+* **C Speed:**
 ```
   biski64            0.418 ns/call
   wyrand             0.449 ns/call
@@ -31,22 +61,26 @@ This repository contains `biski64`, an extremely fast pseudo-random number gener
 ## Rust Algorithm
 
 ```
-// Golden ratio fractional part * 2^64
+use std::num::Wrapping;
+
+// In the actual implementation, these are fields of the Biski64Rng struct.
+let (mut fast_loop, mut mix, mut last_mix, mut old_rot, mut output) = 
+    (Wrapping(0), Wrapping(0), Wrapping(0), Wrapping(0), Wrapping(0));
+
 const GR: Wrapping<u64> = Wrapping(0x9e3779b97f4a7c15);
 
 #[inline(always)]
-pub fn next_u64(&mut self) -> u64 {
-    let old_output = self.output;
+pub fn next_u64() -> u64 {
+    let old_output = output;
+    let new_mix = old_rot + output;
 
-    let new_mix = self.old_rot + self.output;
+    output = GR * mix;
+    old_rot = Wrapping(last_mix.0.rotate_left(18));
 
-    self.output = GR * self.mix;
-    self.old_rot = Wrapping(self.last_mix.0.rotate_left(18));
+    last_mix = fast_loop ^ mix;
+    mix = new_mix;
 
-    self.last_mix = self.fast_loop ^ self.mix;
-    self.mix = new_mix;
-
-    self.fast_loop = self.fast_loop + GR;
+    fast_loop += GR;
 
     old_output.0
 }
@@ -140,13 +174,8 @@ mix = old_rot + output;
 return output;
 ```
 
-*(Note: This a for reduced state demonstration only. Use the above full `biski64()` implementation to ensure pipelined performance and the minimum period length of 2^64.)*
+*(Note: This a for reduced state demonstration only. Use the above full `biski64()` implementations to ensure pipelined performance and the minimum period length of 2^64.)*
 
-## Third Party Testing
-
-Christopher Wellons (skeeto) has tested `biski64` in his [PRNG Shootout](https://github.com/skeeto/prng64-shootout/commit/b018d283) and [commented in Reddit](https://www.reddit.com/r/C_Programming/comments/1kvhgmh/comment/muc3uvb/?context=3):
-
->Great stuff! When I plug it into my shootout, it's as fast as dualmix128 (i.e. saturates my benchmark), but with loopmix128's better properties. The 40-byte state is slightly heavy, but not bad at all, and certainly better than the gigantic states of classical PRNGs (Mersenne Twister, Lagged Fibonacci). **As far as I can tell, biski64 would be a good PRNG to deploy in real programs.**
 
 
 ## Notes
