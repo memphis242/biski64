@@ -179,7 +179,7 @@ mix = old_rot + output;
 return output;
 ```
 
-*(Note: This reduced state mixer is for demonstration only. Use the above full implementation to ensure pipelined performance and the minimum period length of 2^64.)*
+*(Note: This is a scaled down version for testing. Use the above full implementation to ensure pipelined performance and the minimum period length of 2^64.)*
 
 
 ## Scaled Down Testing
@@ -210,6 +210,9 @@ mix = oldRot + output;
 fast_loop += GR;
 return output; 
 ```
+*(Note: This is a scaled down version for testing. Use the above full implementation to ensure pipelined performance and the minimum period length of 2^64.)*
+
+
 
 ## Notes
 Created by Daniel Cota and named after his cat Biscuit - a small and fast Egyptian Mau.
