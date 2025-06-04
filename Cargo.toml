@@ -1,8 +1,8 @@
 [package]
 name = "biski64"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2021"
-description = "A fast, robust, 64-bit pseudo-random number generator with a guaranteed period of 2^64."
+description = "A fast, robust, 64-bit pseudo-random number generator with a guaranteed minimum period of 2^64."
 license = "MIT"
 repository = "https://github.com/danielcota/biski64"
 homepage = "https://github.com/danielcota/biski64"
