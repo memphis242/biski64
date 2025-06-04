@@ -1,15 +1,18 @@
-# biski64: Fast and Robust 2^64 Period Pseudo-Random Number Generator
+# biski64: Fast and Robust Pseudo-Random Number Generator
 
-This repository contains `biski64`, an extremely fast pseudo-random number generator (PRNG) with a guaranteed period of 2^64. It is designed for non-cryptographic applications where speed and statistical quality are important.
+This repository contains `biski64`, an extremely fast pseudo-random number generator (PRNG) with a guaranteed minimum period of 2^64. It is designed for non-cryptographic applications where speed and statistical quality are important.
 
 The library is available on [crates.io](https://crates.io/crates/biski64) and the documentation can be found on [docs.rs](https://docs.rs/biski64).
 
 ## Features
 
-* **High Performance:** Significantly faster than standard library generators and modern high-speed PRNGs like `xoroshiro128++` and `xoshiro256++`.
-* **Exceptional Statistical Quality:** Has passed PractRand (up to 32TB) with zero anomalies and has shown exceptional results in 100 runs of BigCrush. The core design has been proven to be fundamentally sound through rigorous [scaled down testing](#scaled-down-testing).
-* **Guaranteed 2^64 Period:** Incorporates a 64-bit Weyl sequence to ensure a minimum period of 2^64.
-* **Rust Ecosystem Integration:** The library is `no_std` compatible and implements the standard `RngCore` and `SeedableRng` traits from `rand_core` for easy use.
+* **High Performance:** - Significantly faster than standard library generators and modern high-speed PRNGs like `xoroshiro128++` and `xoshiro256++`.
+* **Exceptional Statistical Quality:** - Easily passes BigCrush and terabytes of PractRand. [Scaled down versions](#scaled-down-testing) show even better mixing efficiency than well respected PRNGs like JSF.
+* **Guaranteed Minimum Period:** - Incorporates a 64-bit Weyl sequence to ensure a minimum period of 2^64.
+* **Proven Injectivity:** - Invertible algorithm with proven injectivity via Z3 Prover.
+* **Rust Ecosystem Integration:** - The library is `no_std` compatible and implements the standard `RngCore` and `SeedableRng` traits from `rand_core` for easy use.
+* **C Integration:** - Only requires stdint.h.
+
 
 ## Rust Installation
 
@@ -17,7 +20,7 @@ Add `biski64` and `rand` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-biski64 = "0.2.2"
+biski64 = "0.3.0"
 rand = "0.9"
 ```
 
@@ -31,30 +34,30 @@ let mut rng = Biski64Rng::seed_from_u64(12345);
 let num = rng.next_u64();
 ```
 
-## Third Party Testing
-
-Christopher Wellons (skeeto) has tested `biski64` in his [PRNG Shootout](https://github.com/skeeto/prng64-shootout/commit/b018d283) and [commented in Reddit](https://www.reddit.com/r/C_Programming/comments/1kvhgmh/comment/muc3uvb/?context=3):
-
->Great stuff! When I plug it into my shootout, it's as fast as dualmix128 (i.e. saturates my benchmark), but with loopmix128's better properties. The 40-byte state is slightly heavy, but not bad at all, and certainly better than the gigantic states of classical PRNGs (Mersenne Twister, Lagged Fibonacci). **As far as I can tell, biski64 would be a good PRNG to deploy in real programs.**
-
-
 ## Performance
 
-* **Rust Speed:**
+* **Rust:**
 ```
-  biski64            0.366 ns/call
-  xoshiro256++       0.659 ns/call
-  xoroshiro128++     0.879 ns/call
+  biski64            0.401 ns/call
+  xoshiro256++       0.610 ns/call
+  xoroshiro128++     0.883 ns/call
 ```
 
-* **C Speed:**
+* **C:**
 ```
-  biski64            0.418 ns/call
-  wyrand             0.449 ns/call
-  sfc64              0.451 ns/call
-  xoshiro256++       0.593 ns/call
-  xoroshiro128++     0.802 ns/call
-  PCG128_XSL_RR_64   1.204 ns/call
+  biski64            0.368 ns/call
+  wyrand             0.368 ns/call
+  sfc64              0.368 ns/call
+  xoshiro256++       0.552 ns/call
+  xoroshiro128++     0.732 ns/call
+  PCG128_XSL_RR_64   1.197 ns/call
+```
+
+* **Java:**
+```
+  biski64            0.470 ns/call
+  xoshiro256++       0.609 ns/call
+  xoroshiro128++     0.641 ns/call
 ```
 
 ## Rust Algorithm
@@ -63,66 +66,113 @@ Christopher Wellons (skeeto) has tested `biski64` in his [PRNG Shootout](https:/
 use std::num::Wrapping;
 
 // In the actual implementation, these are fields of the Biski64Rng struct.
-let (mut fast_loop, mut mix, mut last_mix, mut old_rot, mut output) = 
-    (Wrapping(0), Wrapping(0), Wrapping(0), Wrapping(0), Wrapping(0));
-
-const GR: Wrapping<u64> = Wrapping(0x9e3779b97f4a7c15);
+let (mut fast_loop, mut mix, mut loop_mix) = 
+    (Wrapping(0), Wrapping(0), Wrapping(0));
 
 #[inline(always)]
-pub fn next_u64() -> u64 {
-    let old_output = output;
-    let new_mix = old_rot + output;
+pub fn next_u64(&mut self) -> u64 {
+  let output = self.mix + self.loop_mix;
+  let old_loop_mix = self.loop_mix;
 
-    output = GR * mix;
-    old_rot = Wrapping(last_mix.0.rotate_left(18));
+  self.loop_mix = self.fast_loop ^ self.mix;
+  self.mix = Wrapping(self.mix.0.rotate_left(16)) + Wrapping(old_loop_mix.0.rotate_left(40));
 
-    last_mix = fast_loop ^ mix;
-    mix = new_mix;
+  self.fast_loop += 0x9999999999999999;
 
-    fast_loop += GR;
-
-    old_output.0
-}
+  output.0
+  }
 ```
 
 
 ## C Algorithm
 
 ```c
-// Golden ratio fractional part * 2^64
-const uint64_t GR = 0x9e3779b97f4a7c15ULL;
-
 // Helper for rotation
 static inline uint64_t rotateLeft(const uint64_t x, int k) {
     return (x << k) | (x >> (64 - k));
 }
 
 uint64_t biski64() {
-  uint64_t newMix = old_rot + output;
+  uint64_t output = mix + loopMix;
+  uint64_t oldLoopMix = loopMix;
 
-  output = GR * mix;
-  old_rot = rotateLeft(last_mix, 18);
+  loopMix = fast_loop ^ mix;
+  mix = rotateLeft(mix, 16) + rotateLeft(oldLoopMix, 40);
 
-  last_mix = fast_loop ^ mix; 
-  mix = newMix;
-
-  fast_loop += GR;
+  fast_loop += 0x9999999999999999;
 
   return output;
   }
 ```
+
+
+## Java Algorithm
+
+```java
+public long nextLong() {
+  final long output = mix + loopMix;
+  final long oldLoopMix = loopMix;
+
+  loopMix = fastLoop ^ mix;
+  mix = Long.rotateLeft( mix, 16 ) + Long.rotateLeft( oldLoopMix, 40 );
+  fastLoop += 0x9999999999999999L;
+
+  return output;
+  }
+```
+
+
 *(Note: See test files for full seeding and usage examples.)*
 
 
-## BigCrush
+## Parallel Streams
 
-BigCrush was run 100 times on `biski64` (as well as on the below mentioned reference PRNGs).
+`biski64` is well-suited for parallel applications, and parallel streams can be implemented as follows:
+* Randomly seed `mix`, and `loop_mix` for each stream as normal.
+* To ensure maximal separation between sequences, space starting values for each streams' `fast_loop` using something like:
+```fast_loop_i = i * (0xFFFFFFFFFFFFFFFFULL / numStreams);```
+
+*where i is the stream index (0, 1, 2, ...)*
+
+
+## Scaled Down Testing
+
+A key test for any random number generator is to see how it performs when its internal state is drastically reduced. This allows for practical testing of the core mixing algorithm.  `biski64` performs exceptionally well in this regard.
+
+| State Variable Size  | Total State | Practrand Failure |
+| ------------- | ------------- | ------------- |
+| 8-bit  | 24 bits | [2^22 bytes (4 MB)](https://github.com/danielcota/biski64_dev/blob/main/c_reference/test_practrand_8bit_out.txt)|
+| 16-bit  | 48 bits  | [2^40 bytes (1 TB)](https://github.com/danielcota/biski64_dev/blob/main/c_reference/test_practrand_16bit_out.txt) |
+| 32-bit  | 96 bits  | [did not fail, tested to 2^46 bytes (64 TB)](https://github.com/danielcota/biski64_dev/blob/main/c_reference/test_practrand_32bit_out.txt) |
+| 64-bit  | 192 bits  | [did not fail, tested to 2^45 bytes (32 TB)](https://github.com/danielcota/biski64_dev/blob/main/c_reference/test_practrand_64bit_out.txt) |
+		
+The results for the 8-bit and 16-bit scaled down versions show that `biski64` exceeds the mixing efficiency (in terms of PractRand bytes passed per total state size) of even the [well respected and tested JSF PRNG](https://www.pcg-random.org/posts/bob-jenkins-small-prng-passes-practrand.html).
+
+For comparison:
+
+| PRNG  | Total State | Practrand Failure | Ratio (failed exponent/state bits) |
+| ------------- | ------------- | ------------- | ------------- |
+| biski(8-bit)  | 24 bits | 2^22 bytes| **91.7%** |
+| jsf8  | 32 bits | 2^28 bytes | 87.5% |
+
+| PRNG  | Total State | Practrand Failure | Ratio (failed exponent/state bits) |
+| ------------- | ------------- | ------------- | ------------- |
+| biski(16-bit)  | 48 bits | 2^40 bytes| **83.3%** |
+| jsf16  | 64 bits | 2^47 bytes | 73.4% |
+
+The scaled down test results for `biski64` indicate strong performance of its core mixing algorithm (suggesting that the strong performance at full 64-bit size is not a result simply of a large state, but of its robust mixing performance).
+
+
+
+## BigCrush Comparison
+
+BigCrush was run 100 times on `biski64` (and multiple reference PRNGs).
 
 Assuming test failure with a p-value below 0.001 or above 0.999 implies a 0.2% probability of a single test yielding a "false positive" purely by chance with an ideal generator. Running BigCrush 100 times (for a total of 25400 sub-tests), around 50.8 such chance "errors" would be anticipated.
 
 ```
-biski64, 47 failed subtests (out of 25400 total)
-  2 subtests failed twice
+biski64, 51 failed subtests (out of 25400 total)
+  5 subtests failed twice
 
 wyrand, 55 failed subtests (out of 25400 total)
   1 subtest failed THREE times
@@ -147,73 +197,36 @@ pcg128_xsl_rr_64, 47 failed subtests (out of 25400 total)
 *(Note: For an ideal random generator, seeing three or more failures for a specific subtest would not be expected.)*
 
 
-
-
-## Parallel Streams
-
-The Weyl sequence of `biski64` is well-suited for parallel applications, and parallel streams can be implemented as follows:
-* Randomly seed `mix`, `last_mix`, `old_rot` and `output` for each stream as normal.
-* Assign a unique starting value to the `fast_loop` counter for each stream. To ensure maximal separation between sequences, these starting values should be spaced far apart. A simple strategy is to assign the i-th stream's counter as:
-```fast_loop_i = initial_fast_loop_seed + i * GR;```
-
-*where i is the stream index (0, 1, 2, ...) and `GR` is the golden ratio constant (0x9e3779b97f4a7c15ULL).*
-
-
 ## Design
 
-The design process followed modern PRNG principles, focusing on creating a strong core mixer and then combining it with a simple counter to guarantee the period.
+Motivated by M.E. O'Neill's post, [Does It Beat the Minimal Standard](https://www.pcg-random.org/posts/does-it-beat-the-minimal-standard.html) - the initial design for `biski64` used a scaled down version with 8-bit state variables.  This allowed for fast iteration using PractRand.
 
-1. **Core Mixer:** The initial focus was developing a strong mixer, motivated by M.E. O'Neill's challenge in her post, [Does It Beat the Minimal Standard](https://www.pcg-random.org/posts/does-it-beat-the-minimal-standard.html). The developed mixer core (with 64-bits of state) passes 16TB of PractRand.
-2. **Guaranteed Period:** A Weyl sequence was added to provide a guaranteed minimum period of 2^64. Separating the task of period generation from statistical mixing was a deliberate trade-off.
-3. **Performance:** Finally, additional state variables were introduced to enable instruction-level parallelism for maximum speed.
+Once the algorithm was settled on, parameters were selected as follows:
+1. **Additive Constant** - Multiple additive constants were tested using a 16-bit state variable version.  For each constant all possible rotation constants r1 and r2 (r1 < r2) were iterated over and PractRand was run to determine how far each (additiveConstant, r1, r2) variant could get.  The highest performing constant was 0x9999 - passing the most rotational pairs at the highest level.  This constant was then scaled to 0x9999999999999999 in the full 64-bit version.
+2. **Rotation Constants** - It was observed that bitsPerStateVar / 4 showed up frequently at the highest level for r1, as well as integers near bitsPerStateVar * (ɸ - 1) for r2.  This was then used as a heuristic for rotation constants in the 32-bit and 64-bit versions.
+3. **BigCrush Confirmation** - BigCrush was run 100 times on five selected full size 64-bit variants (using the above heuristics).  The best observed r2 values were 39 and 40 - supporting the theory that r1=bits/4 and r2=bits * (ɸ - 1) were solid heuristics. r2=40 was then deemed the best (as it exhibited no subtests failing three times) - and then used for the full 64-bit version.
 
-
-```c
-// The Reduced state 64-bit core mixer at the heart of the algorithm:
-uint32_t output = GR * mix;
-uint32_t old_rot = rotateLeft(last_mix, 11);
-
-last_mix = GR ^ mix;
-mix = old_rot + output;
-
-return output;
 ```
+(r1=16, r2=37) 64 subtests failed (out of 25400 total)
+   2 subtests failed THREE times
+   7 subtests failed twice
 
-*(Note: This is a scaled down version for testing. Use the above full implementation to ensure pipelined performance and the minimum period length of 2^64.)*
+(r1=16, r2=39) 46 subtests failed (out of 25400 total)
+   1 subtest failed THREE times
+   4 subtests failed twice
 
+(r1=16, r2=40) 51 subtests failed (out of 25400 total)
+   5 subtests failed twice
 
-## Scaled Down Testing
+(r1=16, r2=41) 60 subtests failed (out of 25400 total)
+   1 subtest failed THREE times
+   6 subtests failed twice
 
-A key test for any random number generator is to see how it performs when its internal state is drastically reduced. This allows us to practically test its performance within a test suite like PractRand - to see if its core algorithm is truly sound.
-
-`biski64` performs exceptionally in this regard.
-
-| biski64 Version  | Total State | Expected Failure Point |	Actual PractRand Result |
-| ------------- | ------------- | ------------- | ------------- |
-| 8-bit  | 24 bits | ~4 KB | Passes 2 MB|
-| 16-bit  | 48 bits  | ~32 MB | Passes 16 GB |
-		
-The "Expected Failure Point" is the "birthday bound" for a generic generator of a similar size — the point where flaws are statistically expected to appear.
-
-For the scaled down mixer with 8-bit state variables (24-bits of state total), the guaranteed minimum period is only 2^8, but `biski64` passes PractRand to 2^21 bytes. This shows that the core mixer is actively synergizing with the 8-bits of the scaled-down Weyl sequence to create longer periods than the minimum.  The 16-bit version also outpeforms the minimal period by orders of magnitude.
-
-Passing over 500 times more data than the theoretical "birthday bound" limit and exceeding the minimal period by orders of magnitude demonstrates that the core mixing function of `biski64` is fundamentally sound and highly effective at masking its internal state, a desirable property among PRNGs.
-
-```c
-// Non-pipelined 8-bit version used for testing:
-const uint8_t GR = 0x9d;
-
-uint8_t output = GR * mix;
-uint8_t oldRot = rotateLeft(lastMix, 3);
-
-lastMix = fast_loop ^ mix;
-mix = oldRot + output;
-
-fast_loop += GR;
-return output; 
+(r1=16, r2=43) 46 subtests failed (out of 25400 total)
+   1 subtest failed FOUR times
+   1 subtest failed THREE times
+   1 subtest failed twice
 ```
-*(Note: This is a scaled down version for testing. Use the above full implementation to ensure pipelined performance and the minimum period length of 2^64.)*
-
 
 
 ## Notes
