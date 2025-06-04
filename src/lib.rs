@@ -1,7 +1,7 @@
 //! biski64: A fast, 64-bit PRNG that implements the rand_core traits.
 //!
 //! This library provides `Biski64Rng`, a fast, robust, non-cryptographic PRNG 
-//! with a guaranteed period of 2^64. It is designed for applications where 
+//! with a guaranteed minimum period of 2^64. It is designed for applications where 
 //! speed and statistical quality are important.
 
 #![no_std]
@@ -31,7 +31,7 @@ impl SplitMix64 {
 /// An instance of the `biski64` pseudo-random number generator.
 ///
 /// `Biski64Rng` is a fast, robust, non-cryptographic PRNG with a guaranteed
-/// period of 2^64. It is designed for applications where speed and statistical
+/// minimum period of 2^64. It is designed for applications where speed and statistical
 /// quality are important.
 ///
 /// This generator implements the `RngCore` and `SeedableRng` traits from the
@@ -53,29 +53,22 @@ impl SplitMix64 {
 pub struct Biski64Rng {
     fast_loop: Wrapping<u64>,
     mix: Wrapping<u64>,
-    last_mix: Wrapping<u64>,
-    old_rot: Wrapping<u64>,
-    output: Wrapping<u64>,
+    loop_mix: Wrapping<u64>,
 }
 
 impl RngCore for Biski64Rng {
     #[inline(always)]
     fn next_u64(&mut self) -> u64 {
-        const GR: Wrapping<u64> = Wrapping(0x9e3779b97f4a7c15);
-        
-        let old_output = self.output;
-        let new_mix = self.old_rot + self.output;
-    
-        self.output = GR * self.mix;
-        self.old_rot = Wrapping(self.last_mix.0.rotate_left(18));
-    
-        self.last_mix = self.fast_loop ^ self.mix;
-        self.mix = new_mix;
-    
-        self.fast_loop += GR;
-    
-        old_output.0
-    }
+        let output = self.mix + self.loop_mix;
+        let old_loop_mix = self.loop_mix;
+
+        self.loop_mix = self.fast_loop ^ self.mix;
+        self.mix = Wrapping(self.mix.0.rotate_left(16)) + Wrapping(old_loop_mix.0.rotate_left(40));
+
+        self.fast_loop += 0x9999999999999999;
+
+        output.0
+}
 
     #[inline(always)]
     fn next_u32(&mut self) -> u32 {
@@ -94,6 +87,7 @@ impl SeedableRng for Biski64Rng {
     ///
     /// This implementation uses a `SplitMix64` generator to initialize the state,
     /// ensuring a robust and well-distributed starting state from the given seed.
+    /// A 16-iteration warm-up period is then applied.
     fn from_seed(seed: Self::Seed) -> Self {
         // Use the first 8 bytes of the seed for our seeder.
         let seed_for_seeder = u64::from_le_bytes(seed[0..8].try_into().unwrap());
@@ -101,27 +95,31 @@ impl SeedableRng for Biski64Rng {
         // Create a SplitMix64 instance to generate our actual state.
         let mut seeder = SplitMix64::new(seed_for_seeder);
         
-        // Ensure the initial state is not all zero, which is a bad state for this PRNG.
+        // Ensure the initial state is not all zero, which can be a bad state.
         let mut s0 = 0;
         let mut s1 = 0;
         let mut s2 = 0;
-        let mut s3 = 0;
-        let mut s4 = 0;
-        while s0 == 0 && s1 == 0 && s2 == 0 && s3 == 0 && s4 == 0 {
+        while s0 == 0 && s1 == 0 && s2 == 0 {
             s0 = seeder.next();
             s1 = seeder.next();
             s2 = seeder.next();
-            s3 = seeder.next();
-            s4 = seeder.next();
         }
 
-        Self {
+        // Construct the initial RNG instance
+        let mut rng = Self {
             fast_loop: Wrapping(s0),
             mix: Wrapping(s1),
-            last_mix: Wrapping(s2),
-            old_rot: Wrapping(s3),
-            output: Wrapping(s4),
+            loop_mix: Wrapping(s2),
+        };
+
+        // Warm-up period: 16 iterations to further diffuse the initial state.
+        // This helps ensure that the initial outputs are well mixed.
+        for _ in 0..16 {
+            rng.next_u64();
         }
+
+        // Return the warmed-up RNG
+        rng
     }
 }
 
@@ -135,9 +133,9 @@ mod tests {
         // Test that a known seed produces a known, repeatable sequence.
         // This prevents regressions in the algorithm.
         let mut rng = Biski64Rng::seed_from_u64(12345);
-        assert_eq!(rng.next_u64(), 16211692834499208518);
-        assert_eq!(rng.next_u64(), 5838734018703433284);
-        assert_eq!(rng.next_u64(), 2374642854305561427);
+        assert_eq!(rng.next_u64(), 11653916018131561298);
+        assert_eq!(rng.next_u64(), 8879211503557437945);
+        assert_eq!(rng.next_u64(), 8034477089638237744);
     }
 
 #[test]
