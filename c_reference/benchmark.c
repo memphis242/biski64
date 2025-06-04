@@ -4,34 +4,35 @@
 #include <time.h>   // For clock_gettime
 #include <stdbool.h>
 
-// Golden ratio constant for biski64 - golden ratio fractional part * 2^64
-const uint64_t GR = 0x9e3779b97f4a7c15ULL;
-
 // --- State Variables (Global for this benchmark) ---
 // Seeded with dummy data for the benchmark
 
 // For biski64
-uint64_t fast_loop = 0xDEADBEEF12345678ULL;
-uint64_t mix = 0x123456789ABCDEFULL;
-uint64_t lastMix = 0x123456789ABCDEFULL;
-uint64_t oldRot = 0x1112223334445556;
-uint64_t output = 0x123456789ABCDEFULL;
+uint64_t fast_loop = 0x243F6A8885A308D9ULL; // (π - 3) * 2^64
+uint64_t mix = 0xB7E151628AED2A6AULL;       // (e - 2) * 2^64
+uint64_t loopMix = 0x6A09E667F3BCC908ULL;   // (sqrt(2) - 1) * 2^64
 
 // For wyrand
-uint64_t wyrand_seed = 0xDEADBEEF12345678ULL;
+uint64_t wyrand_seed = 0x9E3779B97F4A7C15ULL; // Golden Ratio related: ( (sqrt(5)-1)/2 ) * 2^64
 
 // For sfc64
-uint64_t sfc_a = 0xDEADBEEF12345678ULL;
-uint64_t sfc_b = 0xABCDEF0123456789ULL;
-uint64_t sfc_c = 0x123456789ABCDEF0ULL;
-uint64_t sfc_counter = 1ULL;
+uint64_t sfc_a = 0x9E3779B97F4A7C15ULL;       // Golden Ratio related
+uint64_t sfc_b = 0x6A09E667F3BCC908ULL;       // (sqrt(2) - 1) * 2^64
+uint64_t sfc_c = 0xB7E151628AED2A6AULL;       // (e - 2) * 2^64
+uint64_t sfc_counter = 1ULL;                  // Standard counter initialization, tasteful as is.
 
 // For xoroshiro128++
-uint64_t xoro_s0 = 0xDEADBEEF12345678ULL;
-uint64_t xoro_s1 = 0xABCDEF0123456789ULL;
+uint64_t xoro_s0 = 0x243F6A8885A308D9ULL;     // (π - 3) * 2^64
+uint64_t xoro_s1 = 0xBB67AE8584CAA73BULL;     // (sqrt(3) - 1) * 2^64
 
 // For xoshiro256++
-uint64_t xoro256_s[4] = { 0xDEADBEEF12345678ULL, 0xABCDEF0123456789ULL, 0x123456789ABCDEF0ULL, 0xFEDCBA9876543210ULL };
+uint64_t xoro256_s[4] = {
+    0x243F6A8885A308D9ULL, // (π - 3) * 2^64
+    0xB7E151628AED2A6AULL, // (e - 2) * 2^64
+    0x6A09E667F3BCC908ULL, // (sqrt(2) - 1) * 2^64
+    0xBB67AE8584CAA73BULL  // (sqrt(3) - 1) * 2^64
+};
+
 
 // For PCG128_XSL_RR_64 (128-bit state, 64-bit output)
 __uint128_t pcg128_state_s = (((__uint128_t)0x9ef029c7934105feULL) << 64) | 0x0bf89139a2398791ULL; // Arbitrary initial state for the 128-bit version
@@ -69,21 +70,18 @@ double get_time_sec() {
 // biski64 generator function
 inline uint64_t biski64() {
 
-uint64_t newMix = oldRot + output;
+uint64_t output = mix + loopMix;
 
-output = GR * mix;
-oldRot = rotateLeft(lastMix, 39);
+uint64_t oldLoopMix = loopMix;
+loopMix = fast_loop ^ mix;
+mix = rotateLeft(mix, 16) + rotateLeft(oldLoopMix, 40);
 
-lastMix = fast_loop ^ mix;
-mix = newMix;
-
-fast_loop += GR;
+fast_loop += 0x9999999999999999;
 
 return output;
 }
 
 
-// Wyrand generator function (requires __uint128_t support)
 inline uint64_t wyrand(void) {
     wyrand_seed += 0xa0761d6478bd642fULL;
     __uint128_t t = (__uint128_t)(wyrand_seed ^ 0xe7037ed1a0b428dbULL) * wyrand_seed;
@@ -118,20 +116,20 @@ inline uint64_t xoroshiro128pp(void) {
 // Credits: David Blackman and Sebastiano Vigna
 inline uint64_t xoshiro256pp(void) {
 
-	const uint64_t result = rotateLeft(xoro256_s[0] + xoro256_s[3], 23) + xoro256_s[0];
+    const uint64_t result = rotateLeft(xoro256_s[0] + xoro256_s[3], 23) + xoro256_s[0];
 
-	const uint64_t t = xoro256_s[1] << 17;
+    const uint64_t t = xoro256_s[1] << 17;
 
-	xoro256_s[2] ^= xoro256_s[0];
-	xoro256_s[3] ^= xoro256_s[1];
-	xoro256_s[1] ^= xoro256_s[2];
-	xoro256_s[0] ^= xoro256_s[3];
+    xoro256_s[2] ^= xoro256_s[0];
+    xoro256_s[3] ^= xoro256_s[1];
+    xoro256_s[1] ^= xoro256_s[2];
+    xoro256_s[0] ^= xoro256_s[3];
 
-	xoro256_s[2] ^= t;
+    xoro256_s[2] ^= t;
 
-	xoro256_s[3] = rotateLeft(xoro256_s[3], 45);
+    xoro256_s[3] = rotateLeft(xoro256_s[3], 45);
 
-	return result;
+    return result;
 }
 
 
