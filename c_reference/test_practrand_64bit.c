@@ -3,14 +3,11 @@
 #include <unistd.h> // For write or use fwrite
 #include <time.h>   // For clock_gettime
 
-const uint64_t GR = 0x9e3779b97f4a7c15L;
 
-// For biski64
-uint64_t fast_loop = 0xDEADBEEF12345678ULL;
-uint64_t mix = 0x123456789ABCDEFULL;
-uint64_t lastMix = 0x123456789ABCDEFULL;
-uint64_t oldRot = 0x1112223334445556;
-uint64_t output = 0x123456789ABCDEFULL;
+// For biski64 (seeded in main)
+uint64_t fast_loop;
+uint64_t mix;
+uint64_t loopMix;
 
 uint64_t rotateLeft(unsigned long long x, int k) { return (x << k) | (x >> (64 - k)); }
 
@@ -18,15 +15,13 @@ uint64_t rotateLeft(unsigned long long x, int k) { return (x << k) | (x >> (64 -
 // Function that implements the new algorithm and returns raw 64-bit state
 inline uint64_t biski64() {
 
-uint64_t newMix = oldRot + output;
+uint64_t output = mix + loopMix;
 
-output = GR * mix;
-oldRot = rotateLeft(lastMix, 39);
+uint64_t oldLoopMix = loopMix;
+loopMix = fast_loop ^ mix;
+mix = rotateLeft(mix, 16) + rotateLeft(oldLoopMix, 40);
 
-lastMix = fast_loop ^ mix; 
-mix = newMix;
-
-fast_loop += GR;
+fast_loop += 0x9999999999999999;
 
 return output;
 }
@@ -59,9 +54,7 @@ int main(void) {
 
     fast_loop = splitmix64_next(&time_seed);
     mix = splitmix64_next(&time_seed);
-    lastMix = splitmix64_next(&time_seed);
-    oldRot = splitmix64_next(&time_seed);
-    output = splitmix64_next(&time_seed);
+    loopMix = splitmix64_next(&time_seed);
 
   uint64_t raw_value;
   // Loop infinitely, generating and writing raw 64-bit values
