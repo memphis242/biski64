@@ -5,21 +5,21 @@ gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
 Benchmarking PRNGs for 10000000000 iterations...
 
 Benchmarking biski64...
-  biski64 ns/call:     0.409 ns
+  biski64 ns/call:     0.368 ns
 
 Benchmarking wyrand...
-  wyrand ns/call:         0.445 ns
+  wyrand ns/call:         0.368 ns
 
 Benchmarking sfc64...
-  sfc64 ns/call:          0.441 ns
+  sfc64 ns/call:          0.368 ns
 
 Benchmarking xoroshiro128++...
-  xoroshiro128++ ns/call: 0.787 ns
+  xoroshiro128++ ns/call: 0.732 ns
 
 Benchmarking xoshiro256++...
-  xoshiro256++ ns/call: 0.593 ns
+  xoshiro256++ ns/call: 0.552 ns
 
 Benchmarking PCG128_XSL_RR_64...
-  PCG128_XSL_RR_64 ns/call: 1.340 ns
+  PCG128_XSL_RR_64 ns/call: 1.197 ns
 
 Benchmark complete.
