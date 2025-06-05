@@ -55,9 +55,11 @@ let num = rng.next_u64();
 
 * **Java:**
 ```
-  biski64            0.470 ns/call
-  xoshiro256++       0.609 ns/call
-  xoroshiro128++     0.641 ns/call
+  biski64            0.491 ns/call
+  xoshiro256++       0.739 ns/call
+  xoroshiro128++     0.790 ns/call
+  ThreadLocalRandom  0.846 ns/call
+  Java.util.Random   5.315 ns/call
 ```
 
 ## Rust Algorithm
