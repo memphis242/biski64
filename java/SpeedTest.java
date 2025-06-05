@@ -1,4 +1,9 @@
+package othernet.bits.tests;
+
+import othernet.bits.Biski64;
+
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom; // Added import
 
 public class SpeedTest extends Biski64
 	{
@@ -46,41 +51,48 @@ public class SpeedTest extends Biski64
 
 	private void benchmark()
 		{
+		long sum = 0;
+
 		long startTime = System.currentTimeMillis();
 		for ( int i = 0; i < NUM_SAMPLES; i++ )
-			nextLong();
+			sum += nextLong();
 		double bitsTime = System.currentTimeMillis() - startTime;
 
 
 		startTime = System.currentTimeMillis();
 		for ( int i = 0; i < NUM_SAMPLES; i++ )
-			xoroshiro128pp();
+			sum += xoroshiro128pp();
 		double xoro128Time = System.currentTimeMillis() - startTime;
 
 		startTime = System.currentTimeMillis();
 		for ( int i = 0; i < NUM_SAMPLES; i++ )
-			xoshiro256pp();
+			sum += xoshiro256pp();
 		double xoshiro256Time = System.currentTimeMillis() - startTime;
 
 
 		Random javaRandom = new Random( 123L ); // Using a fixed seed for reproducibility
 		startTime = System.currentTimeMillis();
 		for ( int i = 0; i < NUM_SAMPLES; i++ )
-			javaRandom.nextLong(); // Using nextLong for a more direct comparison
+			sum += javaRandom.nextLong(); // Using nextLong for a more direct comparison
 		double javaTime = System.currentTimeMillis() - startTime;
 
-		System.out.println( "Verification sum: " + ( this.loopMix + xoroshiroS1 + s[0] + javaRandom.nextLong() ) );
+		startTime = System.currentTimeMillis();
+		for ( int i = 0; i < NUM_SAMPLES; i++ )
+			sum += ThreadLocalRandom.current().nextLong();
+		double threadLocalRandomTime = System.currentTimeMillis() - startTime;
 
 		System.out.println( "Generated " + NUM_SAMPLES + " random numbers using each generator." );
 		System.out.println( "Time for biski64.nextLong(): " + bitsTime + " ms" );
 		System.out.println( "Time for xoroshiro128++:  " + xoro128Time + " ms" );
 		System.out.println( "Time for xoshiro256++:    " + xoshiro256Time + " ms" );
 		System.out.println( "Time for Java Random.nextLong(): " + javaTime + " ms" );
+		System.out.println( "Time for ThreadLocalRandom.nextLong(): " + threadLocalRandomTime + " ms" ); // Added output
 		System.out.println();
 
-		System.out.println( "biski64.nextLong() is " + (int) ( 100.0 * ( javaTime / bitsTime - 1.0) ) + "% faster than Java Random (nextLong)" );
-		System.out.println( "biski64.nextLong() is " + (int) ( 100.0 * ( xoro128Time / bitsTime - 1) ) + "% faster than xoroshiro128++" );
-		System.out.println( "biski64.nextLong() is " + (int) (100.0 * ( xoshiro256Time / bitsTime - 1) ) + "% faster than xoshiro256++" );
+		System.out.println( "biski64.nextLong() is " + (int) ( 100.0 * ( javaTime / bitsTime - 1.0 ) ) + "% faster than Java Random (nextLong)" );
+		System.out.println( "biski64.nextLong() is " + (int) ( 100.0 * ( xoro128Time / bitsTime - 1 ) ) + "% faster than xoroshiro128++" );
+		System.out.println( "biski64.nextLong() is " + (int) ( 100.0 * ( xoshiro256Time / bitsTime - 1 ) ) + "% faster than xoshiro256++" );
+		System.out.println( "biski64.nextLong() is " + (int) ( 100.0 * ( threadLocalRandomTime / bitsTime - 1 ) ) + "% faster than ThreadLocalRandom (nextLong)" ); // Added comparison
 		}
 
 
