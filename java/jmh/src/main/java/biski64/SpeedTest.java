@@ -4,7 +4,7 @@ import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.Random;
-import java.util.SplittableRandom; // Added import
+import java.util.SplittableRandom;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.random.RandomGenerator;
@@ -28,7 +28,7 @@ public class SpeedTest {
         public Random random = new Random(System.nanoTime() + Thread.currentThread().getId());
     }
 
-    // State for SplittableRandom.
+    // State for direct SplittableRandom.
     @State(Scope.Thread)
     public static class SplittableRandomState {
         public SplittableRandom splittableRandom;
@@ -55,7 +55,7 @@ public class SpeedTest {
 
             // "Warm up" the xoroshiro state a bit
             for (int i = 0; i < 10; i++) {
-                long r = Long.rotateLeft(s0 + s1, 17) + s0; // This line is just to use the result to avoid dead code elimination if it were a real usage
+                long r = Long.rotateLeft(s0 + s1, 17) + s0; // This line is just to use the result
                 long tempS1 = s1 ^ s0;
                 s0 = Long.rotateLeft(s0, 49) ^ tempS1 ^ (tempS1 << 21);
                 s1 = Long.rotateLeft(tempS1, 28);
@@ -82,7 +82,7 @@ public class SpeedTest {
 
             // "Warm up" the biski64 state
             for (int i = 0; i < 20; i++) {
-                long ignoredOutput = this.mix + this.loopMix; // Use the value to prevent potential dead code elimination
+                long ignoredOutput = this.mix + this.loopMix; // Use the value
                 long oldLoopMixState = this.loopMix;
                 this.loopMix = this.fastLoop ^ this.mix;
                 this.mix = Long.rotateLeft(this.mix, 16) + Long.rotateLeft(oldLoopMixState, 40);
@@ -125,9 +125,9 @@ public class SpeedTest {
         }
     }
 
-    // State for Java 17+ RandomGenerator (L64X128MixRandom)
+    // State for Java 17+ RandomGenerator (L64X128MixRandom by default if available)
     @State(Scope.Thread)
-    public static class RandomGeneratorState {
+    public static class L64X128MixRandomGeneratorState { // Renamed for clarity
         public RandomGenerator randomGenerator;
 
         @Setup(Level.Trial)
@@ -136,11 +136,29 @@ public class SpeedTest {
             try {
                 // Try to get the specific generator
                 randomGenerator = RandomGeneratorFactory.of("L64X128MixRandom").create(seed);
-            } catch (Exception e) {
+            } catch (IllegalArgumentException e) { // More specific exception
                 // If the specific generator isn't available (e.g., older JDK or custom build without it)
                 // fall back to the default generator factory and create an instance with the seed.
-                System.err.println("Failed to get L64X128MixRandom, falling back to default factory for seeded instance. Error: " + e.getMessage());
-                randomGenerator = RandomGeneratorFactory.getDefault().create(seed); // Corrected fallback
+                System.err.println("L64X128MixRandom not found, falling back to default RandomGenerator for seeded instance. Error: " + e.getMessage());
+                randomGenerator = RandomGeneratorFactory.getDefault().create(seed);
+            }
+        }
+    }
+
+    // State for RandomGenerator.of("SplittableRandom")
+    @State(Scope.Thread)
+    public static class SplittableRandomViaFactoryState {
+        public RandomGenerator randomGenerator;
+
+        @Setup(Level.Trial)
+        public void init() {
+            long seed = System.nanoTime() + Thread.currentThread().getId();
+            try {
+                randomGenerator = RandomGeneratorFactory.of("SplittableRandom").create(seed);
+            } catch (IllegalArgumentException e) {
+                System.err.println("SplittableRandom (via factory) not found, this should not happen with a standard JDK. Error: " + e.getMessage());
+                // Fallback or rethrow, depending on desired behavior if this unexpected case occurs
+                randomGenerator = RandomGeneratorFactory.getDefault().create(seed);
             }
         }
     }
@@ -152,7 +170,7 @@ public class SpeedTest {
     }
 
     @Benchmark
-    public void splittableRandomNextLong(SplittableRandomState state, Blackhole bh) { // Added benchmark
+    public void directSplittableRandomNextLong(SplittableRandomState state, Blackhole bh) { // Renamed for clarity
         bh.consume(state.splittableRandom.nextLong());
     }
 
@@ -162,7 +180,12 @@ public class SpeedTest {
     }
 
     @Benchmark
-    public void randomGeneratorL64X128MixRandomNextLong(RandomGeneratorState state, Blackhole bh) {
+    public void randomGeneratorL64X128MixRandomNextLong(L64X128MixRandomGeneratorState state, Blackhole bh) { // Updated state class name
+        bh.consume(state.randomGenerator.nextLong());
+    }
+
+    @Benchmark
+    public void randomGeneratorSplittableRandomNextLong(SplittableRandomViaFactoryState state, Blackhole bh) { // New benchmark
         bh.consume(state.randomGenerator.nextLong());
     }
 
@@ -191,8 +214,8 @@ public class SpeedTest {
         final long t = state.s1 << 17;
         state.s2 ^= state.s0;
         state.s3 ^= state.s1;
-        state.s1 ^= state.s2; // Corrected: was s2, now state.s2
-        state.s0 ^= state.s3; // Corrected: was s3, now state.s3
+        state.s1 ^= state.s2;
+        state.s0 ^= state.s3;
         state.s2 ^= t;
         state.s3 = Long.rotateLeft(state.s3, 45);
         bh.consume(result);
