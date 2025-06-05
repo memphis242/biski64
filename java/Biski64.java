@@ -1,4 +1,5 @@
 import java.math.BigInteger;
+import java.util.random.RandomGenerator;
 
 /**
  * Biski64 is a high-performance pseudo-random number generator (PRNG)
@@ -9,7 +10,7 @@ import java.math.BigInteger;
  * If used in a multi-threaded environment, each thread must have its own distinct
  * instance of {@code Biski64}.
  */
-public class Biski64
+public class Biski64 implements RandomGenerator
 	{
 	protected long mix;
 	protected long loopMix;
@@ -116,6 +117,7 @@ public class Biski64
 	 *
 	 * @return the next pseudorandom {@code long} value
 	 */
+	@Override
 	public long nextLong()
 		{
 		final long output = this.mix + this.loopMix;
