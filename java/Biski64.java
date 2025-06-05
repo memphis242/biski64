@@ -38,16 +38,12 @@ public class Biski64
 		{
 		long initialSeed = System.nanoTime() ^ Thread.currentThread().getId() ^ (((long)threadIndex << 16) | totalNumThreads);
 
-		mix = splitMix64( initialSeed );
-		loopMix = splitMix64( mix );
-
-		initForThread( threadIndex, totalNumThreads );
+		this( threadIndex, totalNumThreads, initialSeed );
 		}
 
 
 	/**
-	 * Creates a new Biski64 generator for a given thread. The seed is initialized using
-	 * a value derived from {@code System.nanoTime()}.
+	 * Creates a new Biski64 generator for a given thread.
 	 *
 	 * @param threadIndex the index of the thread (starting at 0)
 	 * @param totalNumThreads the total number of threads
