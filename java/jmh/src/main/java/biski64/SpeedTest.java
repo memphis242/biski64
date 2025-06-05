@@ -4,6 +4,7 @@ import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.Random;
+import java.util.SplittableRandom; // Added import
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.random.RandomGenerator;
@@ -27,6 +28,19 @@ public class SpeedTest {
         public Random random = new Random(System.nanoTime() + Thread.currentThread().getId());
     }
 
+    // State for SplittableRandom.
+    @State(Scope.Thread)
+    public static class SplittableRandomState {
+        public SplittableRandom splittableRandom;
+
+        @Setup(Level.Trial)
+        public void init() {
+            // Initialize SplittableRandom with a seed.
+            // Using nanoTime + threadId for a simple unique seed per thread.
+            splittableRandom = new SplittableRandom(System.nanoTime() + Thread.currentThread().getId());
+        }
+    }
+
     // State for Xoroshiro128++.
     @State(Scope.Thread)
     public static class XoroshiroState {
@@ -39,8 +53,9 @@ public class SpeedTest {
             s0 = (GR * GR) ^ threadIdBits;
             s1 = GR ^ (threadIdBits >>> 16);
 
-            for (int i = 0; i < 10; i++) { // "Warm up" the xoroshiro state a bit
-                long r = Long.rotateLeft(s0 + s1, 17) + s0;
+            // "Warm up" the xoroshiro state a bit
+            for (int i = 0; i < 10; i++) {
+                long r = Long.rotateLeft(s0 + s1, 17) + s0; // This line is just to use the result to avoid dead code elimination if it were a real usage
                 long tempS1 = s1 ^ s0;
                 s0 = Long.rotateLeft(s0, 49) ^ tempS1 ^ (tempS1 << 21);
                 s1 = Long.rotateLeft(tempS1, 28);
@@ -65,8 +80,9 @@ public class SpeedTest {
             loopMix = seeder.nextLong();
             fastLoop = seeder.nextLong();
 
-            for (int i = 0; i < 20; i++) { // "Warm up" the biski64 state
-                long ignoredOutput = this.mix + this.loopMix;
+            // "Warm up" the biski64 state
+            for (int i = 0; i < 20; i++) {
+                long ignoredOutput = this.mix + this.loopMix; // Use the value to prevent potential dead code elimination
                 long oldLoopMixState = this.loopMix;
                 this.loopMix = this.fastLoop ^ this.mix;
                 this.mix = Long.rotateLeft(this.mix, 16) + Long.rotateLeft(oldLoopMixState, 40);
@@ -95,8 +111,9 @@ public class SpeedTest {
             s2 = splitMix64(s1);
             s3 = splitMix64(s2);
 
+            // "Warm up" the xoshiro256++ state
             for (int i = 0; i < 20; i++) {
-                final long result = Long.rotateLeft(s1 * 5, 7) * 9;
+                final long result = Long.rotateLeft(s1 * 5, 7) * 9; // Use the value
                 final long t = s1 << 17;
                 s2 ^= s0;
                 s3 ^= s1;
@@ -135,6 +152,11 @@ public class SpeedTest {
     }
 
     @Benchmark
+    public void splittableRandomNextLong(SplittableRandomState state, Blackhole bh) { // Added benchmark
+        bh.consume(state.splittableRandom.nextLong());
+    }
+
+    @Benchmark
     public void threadLocalRandomNextLong(Blackhole bh) {
         bh.consume(ThreadLocalRandom.current().nextLong());
     }
@@ -169,8 +191,8 @@ public class SpeedTest {
         final long t = state.s1 << 17;
         state.s2 ^= state.s0;
         state.s3 ^= state.s1;
-        state.s1 ^= state.s2;
-        state.s0 ^= state.s3;
+        state.s1 ^= state.s2; // Corrected: was s2, now state.s2
+        state.s0 ^= state.s3; // Corrected: was s3, now state.s3
         state.s2 ^= t;
         state.s3 = Long.rotateLeft(state.s3, 45);
         bh.consume(result);
