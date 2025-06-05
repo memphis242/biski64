@@ -61,6 +61,8 @@ let num = rng.next_u64();
   ThreadLocalRandom  0.846 ns/call
   Java.util.Random   5.315 ns/call
 ```
+*Tested on an AMD Ryzen 9 7950X3D*
+
 
 ## Rust Algorithm
 
