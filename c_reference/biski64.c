@@ -1,4 +1,6 @@
 #include <stdint.h> // For uint64_t and standard integer types
+#include <stdio.h>  // For printf
+
 
 /**
  * @brief State structure for the biski64 PRNG.
@@ -57,41 +59,35 @@ void biski64_seed(biski64_state* state, uint64_t seed) {
 
 
 /**
- * @brief Initializes the state of a biski64 PRNG stream when using parallel threads/streams.
+ * @brief Initializes the state of a biski64 PRNG stream when using parallel streams.
  *
  * Initializes `mix` and `loop_mix` from the provided `seed` using SplitMix64.
- * Initializes `fast_loop` based on `threadIndex` and `totalNumThreads` to ensure
+ * Initializes `fast_loop` based on `streamIndex` and `totalNumStreams` to ensure
  * distinct, well-spaced sequences for parallel execution.
  *
  * @param state Pointer to the biski64_state structure to be initialized.
  * The caller must ensure this pointer is not NULL.
  * @param seed The base 64-bit value to use for seeding `mix` and `loop_mix`.
- * @param threadIndex The index of the current thread/stream (0 to totalNumThreads-1).
- * The caller must ensure 0 <= threadIndex < totalNumThreads.
- * @param totalNumThreads The total number of threads/streams.
+ * @param streamIndex The index of the current stream (0 to totalNumStreams-1).
+ * The caller must ensure 0 <= streamIndex < totalNumStreams.
+ * @param totalNumStreams The total number of streams.
  * The caller must ensure this is >= 1.
  */
-void biski64_seed_threaded(biski64_state* state, uint64_t seed, int threadIndex, int totalNumThreads) {
+void biski64_stream(biski64_state* state, uint64_t seed, int streamIndex, int totalNumStreams) {
     // It is the caller's responsibility to ensure 'state' is not NULL,
-    // totalNumThreads >= 1, and 0 <= threadIndex < totalNumThreads.
+    // totalNumStreams >= 1, and 0 <= streamIndex < totalNumStreams.
 
     uint64_t seeder_state = seed;
 
     state->mix      = splitmix64_next(&seeder_state);
     state->loop_mix = splitmix64_next(&seeder_state);
 
-    if (totalNumThreads == 1) {
+    if (totalNumStreams == 1)
         state->fast_loop = splitmix64_next(&seeder_state);
-    } else {
+    else {
         // Space out fast_loop starting values for parallel streams.
-        // fast_loop_i = threadIndex * (0xFFFFFFFFFFFFFFFFULL / totalNumThreads)
-        // This provides a simple way to jump ahead in the Weyl sequence part of the state.
-        // Note: (uint64_t)-1 is 0xFFFFFFFFFFFFFFFFULL.
-        // The caller must ensure totalNumThreads is not zero to prevent division by zero.
-        // (The precondition totalNumThreads >= 1 covers this).
-        uint64_t num_threads_u64 = (uint64_t)totalNumThreads;
-        uint64_t increment_per_stream = ((uint64_t)-1) / num_threads_u64;
-        state->fast_loop = (uint64_t)threadIndex * increment_per_stream;
+        uint64_t cyclesPerStream = ((uint64_t)-1) / ((uint64_t)totalNumStreams);
+        state->fast_loop = (uint64_t) streamIndex * cyclesPerStream * 0x9999999999999999ULL;
     }
 }
 
@@ -131,4 +127,53 @@ uint64_t biski64_next(biski64_state* state) {
     state->fast_loop += 0x9999999999999999ULL; // Additive constant for the Weyl sequence.
 
     return output;
+}
+
+
+/**
+ * @brief Main function to test the biski64 PRNG.
+ */
+int main() {
+    printf("--- biski64 Single-Threaded Test ---\n");
+    biski64_state rng_state;
+    uint64_t seed = 12345ULL;
+
+    // Initialize the generator with a seed
+    biski64_seed(&rng_state, seed);
+
+    printf("Seed: %llu\n", seed);
+    printf("Initial State -> fast_loop: %016llx, mix: %016llx, loop_mix: %016llx\n",
+           rng_state.fast_loop, rng_state.mix, rng_state.loop_mix);
+
+    // Generate and print a few random numbers
+    printf("Generating 5 pseudo-random numbers:\n");
+    for (int i = 0; i < 5; i++) {
+        printf("  %d: %016llx\n", i + 1, biski64_next(&rng_state));
+    }
+    printf("\n");
+
+    printf("--- biski64 Parallel Streams Test ---\n");
+    biski64_state stream_state_1;
+    biski64_state stream_state_2;
+    uint64_t base_seed = 67890ULL;
+    int total_streams = 2;
+
+    // Initialize two separate streams from the same base seed
+    biski64_stream(&stream_state_1, base_seed, 0, total_streams); // Stream 0
+    biski64_stream(&stream_state_2, base_seed, 1, total_streams); // Stream 1
+
+    printf("Base Seed: %llu, Total Streams: %d\n\n", base_seed, total_streams);
+
+    printf("Stream 1 (Index 0) Initial State -> fast_loop: %016llx\n", stream_state_1.fast_loop);
+    printf("Stream 2 (Index 1) Initial State -> fast_loop: %016llx\n\n", stream_state_2.fast_loop);
+
+    // Generate numbers from both streams to show they produce different sequences
+    printf("Generating 3 numbers from each stream:\n");
+    for (int i = 0; i < 3; i++) {
+        printf("  Stream 1: %016llx | Stream 2: %016llx\n",
+               biski64_next(&stream_state_1),
+               biski64_next(&stream_state_2));
+    }
+
+    return 0;
 }
