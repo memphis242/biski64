@@ -36,6 +36,22 @@ static uint64_t splitmix64_next(uint64_t* seed_state_ptr) {
 
 
 /**
+ * @brief A private helper to warm up the generator by cycling it several times.
+ *
+ * This function should be called after seeding to discard the initial states,
+ * which might have some statistical weaknesses. The `static` keyword limits
+ * its scope to this file, making it a private helper.
+ *
+ * @param state Pointer to the biski64_state structure to be warmed up.
+ */
+static void biski64_warmup(biski64_state* state) {
+    for (int i = 0; i < 16; ++i) {
+        biski64_next(state); // Assumes this function advances the state
+    }
+}
+
+
+/**
  * @brief Initializes the state of a biski64 PRNG instance from a single 64-bit seed.
  *
  * Uses a SplitMix64 generator to derive the initial values for all internal
@@ -55,6 +71,8 @@ void biski64_seed(biski64_state* state, uint64_t seed) {
     state->mix       = splitmix64_next(&seeder_state);
     state->loop_mix  = splitmix64_next(&seeder_state);
     state->fast_loop = splitmix64_next(&seeder_state);
+
+    warmup();
 }
 
 
@@ -88,6 +106,8 @@ void biski64_stream(biski64_state* state, uint64_t seed, int streamIndex, int to
         // Space out fast_loop starting values for parallel streams.
         uint64_t cyclesPerStream = ((uint64_t)-1) / ((uint64_t)totalNumStreams);
         state->fast_loop = (uint64_t) streamIndex * cyclesPerStream * 0x9999999999999999ULL;
+
+    warmup();
     }
 }
 
