@@ -1,7 +1,3 @@
-package othernet.bits.tests;
-
-import othernet.bits.Biski64;
-
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
