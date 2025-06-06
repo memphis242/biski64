@@ -6,7 +6,7 @@
  * @brief State structure for the biski64 PRNG.
  *
  * Holds the internal state variables required by the biski64 algorithm.
- * This structure should be initialized via biski64_seed() or biski64_seed_threaded().
+ * This structure should be initialized via biski64_seed() or biski64_stream().
  */
 typedef struct {
     uint64_t fast_loop;
