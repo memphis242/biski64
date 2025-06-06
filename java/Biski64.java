@@ -63,7 +63,6 @@ public class Biski64 {
 
     /**
      * A private helper to warm up the generator by cycling it a few times.
-     * This discards the initial states, which might have some statistical weaknesses.
      */
     private void warmup() {
         for (int i = 0; i < 16; i++) {
