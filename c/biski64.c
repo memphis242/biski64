@@ -72,7 +72,7 @@ void biski64_seed(biski64_state* state, uint64_t seed) {
     state->loop_mix  = splitmix64_next(&seeder_state);
     state->fast_loop = splitmix64_next(&seeder_state);
 
-    warmup();
+    biski64_warmup(state);
 }
 
 
@@ -106,9 +106,9 @@ void biski64_stream(biski64_state* state, uint64_t seed, int streamIndex, int to
         // Space out fast_loop starting values for parallel streams.
         uint64_t cyclesPerStream = ((uint64_t)-1) / ((uint64_t)totalNumStreams);
         state->fast_loop = (uint64_t) streamIndex * cyclesPerStream * 0x9999999999999999ULL;
-
-    warmup();
     }
+
+biski64_warmup(state);
 }
 
 
