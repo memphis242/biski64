@@ -20,7 +20,7 @@ Add `biski64` and `rand` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-biski64 = "0.3.0"
+biski64 = "0.3.1"
 rand = "0.9"
 ```
 
