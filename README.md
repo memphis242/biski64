@@ -133,7 +133,7 @@ public long nextLong() {
 
 `biski64` is well-suited for parallel applications, and parallel streams can be implemented as follows:
 * Randomly seed `mix`, and `loop_mix` for each stream as normal.
-* To ensure maximal separation between sequences, space starting values for each streams' `fast_loop` using something like:
+* To ensure maximal separation between sequences, space starting values for each streams' `fast_loop`:
 ```
 uint64_t cycles_per_stream = (2^64 - 1 ) / num_streams;
 fast_loop = i * cycles_per_stream * 0x9999999999999999ULL;
