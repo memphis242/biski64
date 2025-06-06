@@ -62,6 +62,17 @@ public class Biski64 {
 
 
     /**
+     * A private helper to warm up the generator by cycling it a few times.
+     * This discards the initial states, which might have some statistical weaknesses.
+     */
+    private void warmup() {
+        for (int i = 0; i < 16; i++) {
+            nextLong();
+        }
+    }
+    
+
+    /**
      * Reseeds this generator for use as a single stream. The three internal
      * state variables are derived from the given seed.
      *
@@ -76,6 +87,8 @@ public class Biski64 {
 
         seederState = this.loopMix;
         this.fastLoop = splitMix64(seederState);
+
+        warmup();
     }
 
 
@@ -128,6 +141,8 @@ public class Biski64 {
             // If there's only one stream, no offset is needed.
             this.fastLoop = baseFastLoop;
         }
+        
+    warmup();
     }
 
 
