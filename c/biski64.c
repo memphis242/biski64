@@ -14,6 +14,8 @@ typedef struct {
     uint64_t loop_mix;
 } biski64_state;
 
+uint64_t biski64_next(biski64_state* state);
+
 
 /**
  * @internal
