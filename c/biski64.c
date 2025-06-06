@@ -124,7 +124,7 @@ biski64_warmup(state);
  */
 static inline uint64_t rotate_left(const uint64_t x, int k) {
     // Assuming k is within valid range [0, 63] as per function contract.
-    return (x << k) | (x >> (64 - k));
+    return (x << k) | (x >> (-k & 63));
 }
 
 
