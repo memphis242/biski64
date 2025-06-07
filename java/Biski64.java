@@ -23,7 +23,6 @@ public class Biski64 implements RandomGenerator {
         this(System.nanoTime());
     }
 
-
     /**
      * Creates a new Biski64 generator for a single stream using a specific seed.
      *
@@ -32,7 +31,6 @@ public class Biski64 implements RandomGenerator {
     public Biski64(long seed) {
         setSeed(seed);
     }
-
 
     /**
      * Creates a new Biski64 generator for a given stream in a multi-stream setup.
@@ -48,7 +46,6 @@ public class Biski64 implements RandomGenerator {
         setSeedForStream(initialSeed, streamIndex, totalNumStreams);
     }
 
-
     /**
      * Creates a new Biski64 generator for a given stream using a specific seed.
      *
@@ -61,7 +58,6 @@ public class Biski64 implements RandomGenerator {
         setSeedForStream(seed, streamIndex, totalNumStreams);
     }
 
-
     /**
      * A private helper to warm up the generator by cycling it a few times.
      */
@@ -70,7 +66,6 @@ public class Biski64 implements RandomGenerator {
             nextLong();
         }
     }
-    
 
     /**
      * Reseeds this generator for use as a single stream. The three internal
@@ -90,7 +85,6 @@ public class Biski64 implements RandomGenerator {
 
         warmup();
     }
-
 
     /**
      * Initializes or reseeds this generator for a specific stream in a
@@ -130,9 +124,7 @@ public class Biski64 implements RandomGenerator {
             BigInteger cyclesPerStream = ULONG_MAX.divide(BigInteger.valueOf(totalNumStreams));
 
             // Calculate the state offset for this stream: streamIndex * cyclesPerStream * 0x9999999999999999L;
-            BigInteger offset = BigInteger.valueOf(streamIndex)
-                .multiply(cyclesPerStream)
-                .multiply(WEYL_BIG);
+            BigInteger offset = BigInteger.valueOf(streamIndex).multiply(cyclesPerStream).multiply(WEYL_BIG);
 
             // Add the offset to the random base value. The final .longValue() correctly
             // truncates to 64 bits, which is equivalent to modular arithmetic.
@@ -141,10 +133,9 @@ public class Biski64 implements RandomGenerator {
             // If there's only one stream, no offset is needed.
             this.fastLoop = baseFastLoop;
         }
-        
-    warmup();
-    }
 
+        warmup();
+    }
 
     /**
      * A SplitMix64 helper function to scramble and distribute seed bits.
@@ -153,11 +144,10 @@ public class Biski64 implements RandomGenerator {
      * @return A pseudo-random long derived from the input.
      */
     public static long splitMix64(long z) {
-        z = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9L;
-        z = (z ^ (z >>> 27)) * 0x94d049bb133111ebL;
+        z = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9 L;
+        z = (z ^ (z >>> 27)) * 0x94d049bb133111eb L;
         return z ^ (z >>> 31);
     }
-
 
     /**
      * Returns the next pseudorandom {@code long} value from this generator's sequence.
@@ -173,83 +163,10 @@ public class Biski64 implements RandomGenerator {
 
         this.loopMix = this.fastLoop ^ this.mix;
         this.mix = Long.rotateLeft(this.mix, 16) + Long.rotateLeft(oldLoopMix, 40);
-        this.fastLoop += 0x9999999999999999L;
+        this.fastLoop += 0x9999999999999999 L;
 
         return output;
     }
-
-
-    /**
-     * Returns a pseudorandom {@code double} value between 0.0 (inclusive) and 1.0 (exclusive).
-     *
-     * @return a pseudorandom {@code double} value between 0.0 and 1.0
-     */
-    public double random() {
-        // Uses the top 53 bits from nextLong() for double precision
-        return (nextLong() >>> 11) * (1.0 / (1L << 53));
-    }
-
-
-    /**
-     * Returns a pseudorandom {@code int} value between 0 (inclusive)
-     * and the specified value (inclusive), without modulo bias.
-     *
-     * @param maxInclusive the maximum inclusive bound. Must be non-negative.
-     * @return a pseudorandom {@code int} value between 0 and {@code maxInclusive} (inclusive)
-     * @throws IllegalArgumentException if {@code maxInclusive} is negative
-     */
-    public int random(int maxInclusive) {
-        if (maxInclusive < 0) {
-            throw new IllegalArgumentException("maxInclusive must be non-negative");
-        }
-        if (maxInclusive == 0) {
-            return 0;
-        }
-        long N = (long) maxInclusive + 1;
-        long bits;
-        long val;
-        do {
-            bits = nextLong() & Long.MAX_VALUE; // Ensure non-negative
-            val = bits % N;
-        }
-        while (bits - val + (N - 1) < 0); // Debiasing loop
-
-        return (int) val;
-    }
-
-
-    /**
-     * Returns a pseudorandom {@code boolean} value.
-     *
-     * @return a pseudorandom {@code boolean} value
-     */
-    public boolean flipCoin() {
-        return (nextLong() & 1L) == 0L;
-    }
-
-
-    /**
-     * Returns a pseudorandom {@code double} value selected from a
-     * Gaussian (normal) distribution with mean 0.0 and standard deviation 1.0.
-     *
-     * @return a pseudorandom {@code double} from a standard normal distribution
-     */
-    public double randomGaussian() {
-        // Uses the Box-Muller transform
-        double v1, v2, s;
-        do {
-            v1 = 2.0 * random() - 1.0; // Between -1.0 and 1.0
-            v2 = 2.0 * random() - 1.0; // Between -1.0 and 1.0
-            s = v1 * v1 + v2 * v2;
-        }
-        while (s >= 1.0 || s == 0.0);
-
-        double multiplier = Math.sqrt((-2.0 * Math.log(s)) / s);
-
-        return v1 * multiplier;
-        // Note: v2 * multiplier would be the second Gaussian random number, discarded here.
-    }
-
 
     /**
      * Returns a pseudorandom hexadecimal string of the specified length.
@@ -279,18 +196,17 @@ public class Biski64 implements RandomGenerator {
         return sb.substring(0, length);
     }
 
-
     public static void main(String[] args) {
         System.out.println("--- Single Stream Demonstration ---");
         // Create a generator with a fixed seed for repeatable results.
-        Biski64 rng = new Biski64(12345L);
+        Biski64 rng = new Biski64(12345 L);
         System.out.println("5 random longs from a single stream (Seed: 12345L):");
         for (int i = 0; i < 5; i++) {
             System.out.println("  " + rng.nextLong());
         }
 
         System.out.println("\n--- Multi-Stream Demonstration ---");
-        final long sharedSeed = 67890L;
+        final long sharedSeed = 67890 L;
         final int numStreams = 4;
         System.out.printf("Generating the first value from %d parallel streams (Shared Seed: %dL):\n", numStreams, sharedSeed);
 
