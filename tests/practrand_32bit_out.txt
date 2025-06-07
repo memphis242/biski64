@@ -103,3 +103,7 @@ length= 32 terabytes (2^45 bytes), time= 97412 seconds
 rng=RNG_stdin32, seed=unknown
 length= 64 terabytes (2^46 bytes), time= 193977 seconds
   no anomalies in 352 test result(s)
+
+rng=RNG_stdin32, seed=unknown
+length= 128 terabytes (2^47 bytes), time= 387356 seconds
+  no anomalies in 358 test result(s)

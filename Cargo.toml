@@ -1,6 +1,6 @@
 [package]
 name = "biski64"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 description = "A fast, robust, 64-bit pseudo-random number generator with a guaranteed minimum period of 2^64."
 license = "MIT"

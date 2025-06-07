@@ -20,7 +20,7 @@ Add `biski64` and `rand` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-biski64 = "0.3.0"
+biski64 = "0.3.1"
 rand = "0.9"
 ```
 
@@ -133,10 +133,12 @@ public long nextLong() {
 
 `biski64` is well-suited for parallel applications, and parallel streams can be implemented as follows:
 * Randomly seed `mix`, and `loop_mix` for each stream as normal.
-* To ensure maximal separation between sequences, space starting values for each streams' `fast_loop` using something like:
-```fast_loop_i = i * (0xFFFFFFFFFFFFFFFFULL / numStreams);```
-
-*where i is the stream index (0, 1, 2, ...)*
+* To ensure maximal separation between sequences, space starting values for each streams' `fast_loop`:
+```
+uint64_t cycles_per_stream = (2^64 - 1 ) / num_streams;
+fast_loop = i * cycles_per_stream * 0x9999999999999999ULL;
+```
+*where i is the stream index (0, 1, 2, ...) as demonstrated in the C, Rust and Java example code*
 
 
 ## Scaled Down Testing
@@ -145,10 +147,10 @@ A key test for any random number generator is to see how it performs when its in
 
 | State Variable Size  | Total State | Practrand Failure |
 | ------------- | ------------- | ------------- |
-| 8-bit  | 24 bits | [2^22 bytes (4 MB)](https://github.com/danielcota/biski64_dev/blob/main/c_reference/test_practrand_8bit_out.txt)|
-| 16-bit  | 48 bits  | [2^40 bytes (1 TB)](https://github.com/danielcota/biski64_dev/blob/main/c_reference/test_practrand_16bit_out.txt) |
-| 32-bit  | 96 bits  | [did not fail, tested to 2^46 bytes (64 TB)](https://github.com/danielcota/biski64_dev/blob/main/c_reference/test_practrand_32bit_out.txt) |
-| 64-bit  | 192 bits  | [did not fail, tested to 2^45 bytes (32 TB)](https://github.com/danielcota/biski64_dev/blob/main/c_reference/test_practrand_64bit_out.txt) |
+| 8-bit  | 24 bits | [2^22 bytes (4 MB)](https://github.com/danielcota/biski64/blob/main/tests/practrand_8bit_out.txt)|
+| 16-bit  | 48 bits  | [2^40 bytes (1 TB)](https://github.com/danielcota/biski64/blob/main/tests/practrand_16bit_out.txt) |
+| 32-bit  | 96 bits  | [did not fail, tested to 2^47 bytes (128 TB)](https://github.com/danielcota/biski64/blob/main/tests/practrand_32bit_out.txt) |
+| 64-bit  | 192 bits  | [did not fail, tested to 2^45 bytes (32 TB)](https://github.com/danielcota/biski64/blob/main/tests/practrand_64bit_out.txt) |
 		
 The results for the 8-bit and 16-bit scaled down versions show that `biski64` exceeds the mixing efficiency (in terms of PractRand bytes passed per total state size) of even the [well respected and tested JSF PRNG](https://www.pcg-random.org/posts/bob-jenkins-small-prng-passes-practrand.html).
 
