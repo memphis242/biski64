@@ -80,3 +80,7 @@ length= 16 terabytes (2^44 bytes), time= 112598 seconds
 rng=RNG_stdin64, seed=unknown
 length= 32 terabytes (2^45 bytes), time= 225174 seconds
   no anomalies in 455 test result(s)
+
+rng=RNG_stdin64, seed=unknown
+length= 64 terabytes (2^46 bytes), time= 449866 seconds
+  no anomalies in 464 test result(s)
