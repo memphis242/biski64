@@ -7,7 +7,6 @@
 #![no_std]
 
 use rand_core::{RngCore, SeedableRng};
-use core::num::Wrapping;
 
 // Helper struct for seeding. This is a complete SplitMix64 PRNG.
 struct SplitMix64 {
@@ -51,9 +50,9 @@ impl SplitMix64 {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Biski64Rng {
-    fast_loop: Wrapping<u64>,
-    mix: Wrapping<u64>,
-    loop_mix: Wrapping<u64>,
+    fast_loop: u64,
+    mix: u64,
+    loop_mix: u64,
 }
 
 impl Biski64Rng {
@@ -85,29 +84,29 @@ impl Biski64Rng {
             s1 = seeder.next(); // Becomes mix
             s2 = seeder.next(); // Becomes loop_mix
         }
-        
+
         let base_fast_loop = s0;
 
         let final_fast_loop = if total_streams > 1 {
             // Use u128 for intermediate calculations to prevent overflow.
             let cycles_per_stream: u128 = (u64::MAX as u128) / (total_streams as u128);
-            
+
             // Calculate the offset for this stream's sequence.
             let offset: u128 = (stream_index as u128)
                 .wrapping_mul(cycles_per_stream)
-                .wrapping_mul(0x9999999999999999 as u128);
-                
+                .wrapping_mul(0x9999999999999999);
+
             // Add the offset to the random base value. The conversion from u128 to u64
             // and the `wrapping_add` correctly simulate the desired modular arithmetic.
             base_fast_loop.wrapping_add(offset as u64)
         } else {
             base_fast_loop
         };
-        
+
         let mut rng = Self {
-            fast_loop: Wrapping(final_fast_loop),
-            mix: Wrapping(s1),
-            loop_mix: Wrapping(s2),
+            fast_loop: final_fast_loop,
+            mix: s1,
+            loop_mix: s2,
         };
 
         // Warm-up period.
@@ -122,15 +121,15 @@ impl Biski64Rng {
 impl RngCore for Biski64Rng {
     #[inline(always)]
     fn next_u64(&mut self) -> u64 {
-        let output = self.mix + self.loop_mix;
-        let old_loop_mix = self.loop_mix;
+        let output = self.mix.wrapping_add(self.loop_mix);
 
-        self.loop_mix = self.fast_loop ^ self.mix;
-        self.mix = Wrapping(self.mix.0.rotate_left(16)) + Wrapping(old_loop_mix.0.rotate_left(40));
+        (self.fast_loop, self.mix, self.loop_mix) = (
+            self.fast_loop.wrapping_add(0x9999999999999999),
+            self.mix.rotate_left(16).wrapping_add(self.loop_mix.rotate_left(40)),
+            self.fast_loop ^ self.mix,
+        );
 
-        self.fast_loop += 0x9999999999999999;
-
-        output.0
+        output
     }
 
     #[inline(always)]
@@ -154,10 +153,10 @@ impl SeedableRng for Biski64Rng {
     fn from_seed(seed: Self::Seed) -> Self {
         // Use the first 8 bytes of the seed for our seeder.
         let seed_for_seeder = u64::from_le_bytes(seed[0..8].try_into().unwrap());
-        
+
         // Create a SplitMix64 instance to generate our actual state.
         let mut seeder = SplitMix64::new(seed_for_seeder);
-        
+
         // Ensure the initial state is not all zero, which can be a bad state.
         let mut s0 = 0;
         let mut s1 = 0;
@@ -170,9 +169,9 @@ impl SeedableRng for Biski64Rng {
 
         // Construct the initial RNG instance
         let mut rng = Self {
-            fast_loop: Wrapping(s0),
-            mix: Wrapping(s1),
-            loop_mix: Wrapping(s2),
+            fast_loop: s0,
+            mix: s1,
+            loop_mix: s2,
         };
 
         // Warm-up period: 16 iterations to further diffuse the initial state.
@@ -235,7 +234,7 @@ mod tests {
         let val0 = stream0.next_u64();
         let val1 = stream1.next_u64();
         let val2 = stream2.next_u64();
-        
+
         assert_ne!(val0, val1, "Streams 0 and 1 should not produce the same first value");
         assert_ne!(val0, val2, "Streams 0 and 2 should not produce the same first value");
         assert_ne!(val1, val2, "Streams 1 and 2 should not produce the same first value");
