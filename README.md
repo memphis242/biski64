@@ -20,7 +20,7 @@ Add `biski64` and `rand` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-biski64 = "0.3.1"
+biski64 = "0.3.2"
 rand = "0.9"
 ```
 
@@ -67,24 +67,22 @@ let num = rng.next_u64();
 ## Rust Algorithm
 
 ```rust
-use std::num::Wrapping;
-
 // In the actual implementation, these are fields of the Biski64Rng struct.
-let (mut fast_loop, mut mix, mut loop_mix) = 
-    (Wrapping(0), Wrapping(0), Wrapping(0));
+let (mut fast_loop, mut mix, mut loop_mix) = (0u64, 0u64, 0u64);
 
 #[inline(always)]
 pub fn next_u64(&mut self) -> u64 {
-  let output = self.mix + self.loop_mix;
-  let old_loop_mix = self.loop_mix;
+    // The output is calculated from the current state.
+    let output = self.mix.wrapping_add(self.loop_mix);
 
-  self.loop_mix = self.fast_loop ^ self.mix;
-  self.mix = Wrapping(self.mix.0.rotate_left(16)) + Wrapping(old_loop_mix.0.rotate_left(40));
+    (self.fast_loop, self.mix, self.loop_mix) = (
+        self.fast_loop.wrapping_add(0x9999999999999999),
+        self.mix.rotate_left(16).wrapping_add(self.loop_mix.rotate_left(40)),
+        self.fast_loop ^ self.mix,
+    );
 
-  self.fast_loop += 0x9999999999999999;
-
-  output.0
-  }
+    output
+}
 ```
 
 
