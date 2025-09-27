@@ -78,6 +78,7 @@ void biski64_seed(biski64_state* state, uint64_t seed) {
 }
 
 
+#ifndef BISKI64_DONT_USE_PARALLEL_STREAMS
 /**
  * @brief Initializes the state of a biski64 PRNG stream when using parallel streams.
  *
@@ -112,6 +113,7 @@ void biski64_stream(biski64_state* state, uint64_t seed, int streamIndex, int to
 
     biski64_warmup(state);
 }
+#endif // BISKI64_DONT_USE_PARALLEL_STREAMS
 
 
 /**
