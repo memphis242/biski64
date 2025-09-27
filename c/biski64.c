@@ -110,7 +110,7 @@ void biski64_stream(biski64_state* state, uint64_t seed, int streamIndex, int to
         state->fast_loop = (uint64_t) streamIndex * cyclesPerStream * 0x9999999999999999ULL;
     }
 
-biski64_warmup(state);
+    biski64_warmup(state);
 }
 
 
