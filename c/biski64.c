@@ -14,7 +14,7 @@ typedef struct {
     uint64_t loop_mix;
 } biski64_state;
 
-uint64_t biski64_next(biski64_state* state);
+static uint64_t biski64_next(biski64_state* state);
 
 
 /**
@@ -65,7 +65,7 @@ static void biski64_warmup(biski64_state* state) {
  * The caller must ensure this pointer is not NULL.
  * @param seed  The 64-bit value to use as the seed.
  */
-void biski64_seed(biski64_state* state, uint64_t seed) {
+static void biski64_seed(biski64_state* state, uint64_t seed) {
     // It is the caller's responsibility to ensure 'state' is not NULL.
     uint64_t seeder_state = seed;
 
@@ -94,7 +94,7 @@ void biski64_seed(biski64_state* state, uint64_t seed) {
  * @param totalNumStreams The total number of streams.
  * The caller must ensure this is >= 1.
  */
-void biski64_stream(biski64_state* state, uint64_t seed, int streamIndex, int totalNumStreams) {
+static void biski64_stream(biski64_state* state, uint64_t seed, int streamIndex, int totalNumStreams) {
     // It is the caller's responsibility to ensure 'state' is not NULL,
     // totalNumStreams >= 1, and 0 <= streamIndex < totalNumStreams.
 
@@ -139,7 +139,7 @@ static inline uint64_t rotate_left(const uint64_t x, int k) {
  * by a seeding function. The caller must ensure this pointer is not NULL.
  * @return A 64-bit pseudo-random unsigned integer.
  */
-uint64_t biski64_next(biski64_state* state) {
+static uint64_t biski64_next(biski64_state* state) {
     // It is the caller's responsibility to ensure 'state' is not NULL and initialized.
 
     const uint64_t output = state->mix + state->loop_mix;
